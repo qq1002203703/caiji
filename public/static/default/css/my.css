@@ -1,0 +1,13 @@
+.Validform_right{
+	color:#71b83d;
+ padding-left:20px;
+	background:url(../images/right.png) no-repeat left center;
+}
+.Validform_wrong{
+	color:red;
+	padding-left:20px;
+	white-space:nowrap;
+	background:url(../images/error.png) no-repeat left center;
+}
+
+.ui-button-custom.loading::before{background:url(ui/ui/images/Button/loading-white.png)

@@ -1,0 +1,255 @@
+一个微型的ActiveRecord库（包含注释才400行)，支持链式调用以及（HAS_ONE， HAS_MANY， BELONGS_TO）三种关联关系
+
+【主要函数】
+
+1、设置数据库连接
+	mysql时，AR::setDb([
+		//数据库种类
+		'database_type' => 'mysql',
+		//数据库名
+		'database_name' => 'mycmf',
+		//服务器地址
+		'server' => '127.0.0.1',
+		//用户名
+		'username' => 'root',
+		//密码
+		'password' => 'root',
+		//端口
+		'port' => 3306,
+		//字符编码
+		'charset' => 'utf8mb4',
+		//表前缀
+		'prefix' => 'cmf_'
+	]);
+	sqlite时，AR::setDb( ['database_type' => 'sqlite','database_file' => 'db/ppphp.rdb']);
+
+2、insert($data=array()) : boolean|AR对象|int|string
+	把数据插入到数据库中，不提供参数数据时，会使用当前对象的值生成插入SQL语句，插入失败时返回false,插入成功按下面处理：
+		1、不提供参数数据时，插入成功总是返加AR对象，但会把最后插入行的ID或序列值保存到$this->{$this->primaryKey}中。
+		2、提供参数时，插入成功时，如果存在最后插入行的ID或序列值，就返回它，否则就返回true
+	$user = new User();
+	$user->name = 'demo';
+	$user->password = md5('demo');
+	$user->insert();
+	或：
+	$user->insert(['name' => 'demo','password' => md5('demo')]);
+	
+3、find(integer $id = null,$return_array=false) : boolean|AR对象|array
+	从数据库查找一条记录，如果使用$id参数，则使用这个id来进行查找，最后如果没有查到记录时返回false，如果查到则按下面两种方式处理：
+		$return_array为false时，将记录赋值给当前对象  并返回当前对象
+		$return_array为ture时：直接返回结果集的一维数组
+	$user->notnull('id')->orderby('id desc')->find();
+
+4、findAll($return_array=false) : array
+	从数据库查找多条记录，查寻到结果返回数组，没有查到返回空数组。
+	$return_array为false时，返回的数组每一个子项都是一个AR对象；
+	$return_array为true时，返回的数组每一个子项都还是数组，即整个是一个二维数组。
+
+5、update($data=array()) : AR|int|bool
+	更新数据到数据库中，不提供数据时，就取当前对象对应的数据。 会自动从数据中获取主键值，所以如果数据中包含了主键的值，前面就可以完全不用where语句了，返回值如下：
+			1、不提供参数数据时，如果原AR对象没有数据就返回false,否则返回当前AR对象；
+			2、提供参数数据时，如果参数格式不正确就返回false,否则返回执行update后受影响的行数
+	$user->notnull('id')->orderby('id desc')->find();
+	$user->email = 'test@example.com';
+	$user->update();
+	或
+	$user->update(['email'=>'test@example.com','id'=>15]);
+
+6、delete($data=array()) : int
+	不提供参数数据时，会偿试从当前AR对象中获取主键值，否则偿试从参数中获取主键值；返回受影响的行数
+
+7、lastSql(): string
+	返回最后一次执行的sql语句
+
+8、reset($is_reset_data=true) : AR对象
+	$is_reset_data为false时：将$params, $sqlExpressions数组重置
+	$is_reset_data为true时:除重置上面两个外，还重置$data和$dirty
+
+9、dirty(array $dirty = array()) : AR对象
+	这个函数用来设置或者重置dirty数据
+
+10、getRelation($name):array()|AR对象
+   * @param string $name string：The name of the relation,$this->relation的一个键名.
+	 * 关于关联关系 $relations的设置，如下面post表的设置
+		$relations = [
+			'tags' => array(self::HAS_MANY, 'post_tag', 'post_id','portal','obj',['func'=>'args']),
+      'comments' => array(self::HAS_MANY, 'comment', 'post_id','portal'),
+      'author' => array(self::BELONGS_TO, 'user', 'user_id','portal'),
+      'category' => array(self::BELONGS_TO, 'category', 'category_id','portal'),
+		];
+	 * $relation[$name]是一个数组，最少需要提供前面4个值，后面2个值为可选项
+	 * [0] string：self::HAS_ONE，self::HAS_MANY，self::BELONGS_TO中的一种
+	 * [1] string：数据表名
+	 * [2] string：关联的字段名
+	 * [3] string：模块名，model所在的module name 
+	 * [4] string：如果提供此项，会把此项作为一个属性保存到后面的对象中，传递$this作为它的值
+	 * [5] array：二维数组，键名是本类中的方法名，值是此方法的参数（多个参数用数组表示）；求影射表的值前会先回调这些方法 
+								格式: [
+												'method_name1'=>['param1','param2','param3'],
+												'method_name2'=>['param1','param2','param3'],
+												'method_name3'=>['param1','param2','param3']
+											]
+
+【SQL部分帮助函数】
+1、select()
+	设置需要查找的字段
+	$user->select('id', 'name')->find();
+
+2、from()
+	设置查找的表
+	$user->select('id', 'name')->from('user')->find();
+
+3、join()
+	使用join函数设置连接表查询
+	$user->join('contact', 'contact.user_id = user.id')->find();
+
+4、where()
+	设置where条件
+	$user->where('id=1 AND name="demo"')->find();
+
+5、group()/groupby()
+	$user->select('count(1) as count')->groupby('name')->findAll();
+
+6、order()/orderby()
+	$user->orderby('name DESC')->find();
+
+7、limit()
+	$user->orderby('name DESC')->limit(0, 1)->find();$user->orderby('name DESC')->limit(1)->find();
+
+【WHERE 条件】
+1、equal()/eq()
+	$user->eq('id', 1)->find();
+
+2、notequal()/ne()
+	$user->ne('id', 1)->find();
+
+3、greaterthan()/gt()
+	$user->gt('id', 1)->find();
+
+4、lessthan()/lt()
+	$user->lt('id', 1)->find();
+
+5、greaterthanorequal()/ge()/gte()
+	$user->ge('id', 1)->find();
+
+6、lessthanorequal()/le()/lte()
+	$user->le('id', 1)->find();
+
+7、like()
+	$user->like('name', 'de')->find();
+
+8、in()
+	$user->in('id', [1, 2])->find();
+
+9、notin()
+	$user->notin('id', [1,3])->find();
+
+10、isnull()
+	$user->isnull('id')->find();
+
+11、isnotnull()/notnull()
+	$user->isnotnull('id')->find();
+
+
+【例子】
+<?php 
+require_once('vendor/autoload.php');
+class User extends ActiveRecord{
+    public $table = 'user';
+    public $relations = array(
+        'posts' => array(self::HAS_MANY, 'Post', 'user_id'),
+    );
+}
+class Post extends ActiveRecord{
+    public $table = 'post';
+    public $relations = array(
+        'tags' => array(self::HAS_MANY, 'Post2Tag', 'post_id'),
+        'comments' => array(self::HAS_MANY, 'Comment', 'post_id'),
+        'author' => array(self::BELONGS_TO, 'User', 'user_id'),
+        'category' => array(self::BELONGS_TO, 'Category', 'category_id'),
+    );
+    public function url(){ return '/post/'. $this->id . '/view'; }
+    public function editurl(){ return '/post/'. $this->id . '/edit'; }
+    public function img(){
+        if (preg_match( '/src="([^"]*)"/i', $this->comment, $match))
+            return $match[1];
+        return '/web/images/post1.jpg';
+    }
+    public function showTime(){ return date('M, d Y', $this->time); }
+    public function commentCount(){ return '1 comments';}
+    public function summary(){ return strlen($this->content) > 300?substr($this->content, 0, 300). '...': $this->content;}
+    public function getTags(){
+        return array_map(function($tag){
+            return $tag->tag->name;
+        }, $this->tags);
+    }
+    function updateCategory(){
+        $category = (new Category)->eq('id', $this->category_id)->find();
+        $category->count = $category->count + 1;
+        $category->update();
+        return $this;
+        //(new Category)->set('count', 'count+1')->eq('id', $this->id)->update();
+    }
+    function updateTag($tags){
+        $tags = array_map(function($t){ return trim($t); }, explode(',', $tags));
+        $tags = array_filter($tags, function($t){ return strlen($t)>0; });
+        foreach($this->tags as $i=>$tag){
+            $key = array_search($tag->tag->name, $tags);
+            if (false === $key){
+                $tag->tag->count = $tag->tag->count - 1;
+                if ($tag->tag->count > 0)
+                    $tag->tag->update();
+                else
+                    $tag->tag->delete();
+                $tag->delete();
+            } else unset($tags[$key]);//do not change tag
+        }
+        foreach($tags as $i=>$t){
+            $tag = new Tag();
+            $post2tag = new Post2Tag();
+            $tag->reset()->eq('name', $t)->find();
+            if (!$tag->id){
+                $tag->name = $t;
+                $tag->count = 1;
+                $tag->insert();
+            }else{
+                $tag->count = $tag->count + 1;
+                $tag->update();
+            }
+            $post2tag->tag_id = $tag->id;
+            $post2tag->post_id = $this->id;
+            $post2tag->insert();
+        }
+        return $this;
+    }
+}
+class Comment extends ActiveRecord{
+    public $table = 'comments';
+    public $relations = array(
+        'post' => array(self::BELONGS_TO, 'Post', 'post_id'),
+    );
+    public function url(){ return '/post/'. $this->post_id. '/view#comment-'. $this->id; }
+    public function posturl(){ return '/post/'. $this->post_id. '/view'; }
+    public function sumarry(){ return $this->content; }
+}
+class Category extends ActiveRecord{
+    public $table = 'category';
+    public $relations = array(
+        'posts' => array(self::HAS_MANY, 'Post', 'category_id'),
+    );
+    public function url(){ return '/category/'. $this->id. '/post'; }
+}
+class Tag extends ActiveRecord{
+    public $table = 'tag';
+    public $relations = array(
+        'tags' => array(self::HAS_MANY, 'Post2Tag', 'tag_id'),
+    );
+    public function url(){ return '/tag/'. $this->id. '/post'; }
+}
+class Post2Tag extends ActiveRecord{
+    public $table = 'post_tag';
+    public $relations = array(
+        'post' => array(self::BELONGS_TO, 'Post', 'post_id'),
+        'tag' => array(self::BELONGS_TO, 'Tag', 'tag_id'),
+    );
+}

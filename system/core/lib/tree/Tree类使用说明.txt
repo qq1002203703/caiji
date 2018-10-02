@@ -1,0 +1,136 @@
+Overview
+
+This library provides handling of data that is structured hierarchically using parent ID references. A typical example is a table in a relational database where each record’s “parent” field references the primary key of another record. Of course, usage is not limited to data originating from a database, but anything: you supply the data, and the library uses it, regardless of where the data came from and how it was processed.
+
+It is important to know that the tree structure created by this package is read-only: you can’t use it to perform modifications of the tree nodes. If you need a library for that, you might want to take a look at nicmart/tree.
+
+On the other hand, one nice thing is that it’s pretty fast. This does not only mean the code itself, but also that the constructor takes the input data in a format that is simple to create. For instance, to create a tree from database content, a single SELECT is sufficient, regardless of the depth of the tree and even for thousands of nodes.
+
+Installation
+
+The preferred way to install Tree is through Composer. For this, simply execute composer require bluem/tree (depending on your Composer installation, it could be “composer.phar” instead of “composer”) and everything should work fine. Or you manually add"bluem/tree": "~2.0" to the dependencies in your composer.json file and subsequently install/update dependencies.
+
+Alternatively, you can clone the repository using git or download a tagged release.
+
+Updating
+
+As this library uses semantic versioning, you will get fixes and feature additions when running composer update, but not changes which break the API.
+
+Usage
+
+Creating a tree
+
+// Create the tree with an array of arrays (or use an array of Iterators,
+// Traversable of arrays or Traversable of Iterators):
+$data = [
+    ['id' => 1, 'parent' => 0, 'title' => 'Node 1'],
+    ['id' => 2, 'parent' => 1, 'title' => 'Node 1.1'],
+    ['id' => 3, 'parent' => 0, 'title' => 'Node 3'],
+    ['id' => 4, 'parent' => 1, 'title' => 'Node 1.2'],
+];
+$tree = new BlueM\Tree($data);
+
+// When using a data source that uses different keys for "id" and "parent",
+// or if the root node ID is not 0 (in this example: -1), use the options
+// array you can pass to the constructor:
+$data = [
+    ['nodeId' => 1, 'parentId' => -1, 'title' => 'Node 1'],
+    ['nodeId' => 2, 'parentId' => 1, 'title' => 'Node 1.1'],
+    ['nodeId' => 3, 'parentId' => -1, 'title' => 'Node 3'],
+    ['nodeId' => 4, 'parentId' => 1, 'title' => 'Node 1.2'],
+];
+$tree = new BlueM\Tree(
+    $data,
+    ['rootId' => -1, 'id' => 'nodeId', 'parent' => 'parentId']
+);
+Updating the tree with new data
+
+// Rebuild the tree from new data
+$tree->rebuildWithData($newData);
+Retrieving nodes
+//获取格式化后的字符串形式的树型结构
+$treeString=$tree->getTree(0,true,'title',['id','title'],'<li%select% id="%id%">%title%</li>',['id'=>1,'text'=>' class="active"']);
+//获取数组形式的所有节点的树型结构
+$treeArray=$tree->getTreeArray();
+//获取数组形式的某个节点的树型结构（第二个参数为真时包含自身，否则只返回后代节点）
+$treeArray=$tree->getTreeByidArray(4,true,4);
+// Get the top-level nodes (returns array)
+$rootNodes = $tree->getRootNodes();
+
+// Get all nodes (returns array)
+$allNodes = $tree->getNodes();
+
+// Get a single node by its unique identifier
+$node = $tree->getNodeById(12345);
+Getting a node’s parent, siblings, children, ancestors and descendants
+
+// Get a node's parent node (will be null for the root node)
+$parentNode = $node->getParent();
+
+// Get a node's siblings as an array
+$siblings = $node->getSiblings();
+
+// Ditto, but include the node itself (identical to $node->getParent()->getChildren())
+$siblings = $node->getSiblingsAndSelf();
+
+// Get a node's preceding sibling (null, if there is no preceding sibling)
+$precedingSibling = $node->getPrecedingSibling();
+
+// Get a node's following sibling (null, if there is no following sibling)
+$followingSibling = $node->getFollowingSibling();
+
+// Does the node have children?
+$bool = $node->hasChildren();
+
+// Get the number of Children
+$bool = $node->countChildren();
+
+// Get a node's child nodes
+$children = $node->getChildren();
+
+// Get a node's ancestors (parent, grandparent, ...)
+$ancestors = $node->getAncestors();
+
+// Ditto, but include the node itself
+$ancestorsPlusSelf = $node->getAncestorsAndSelf();
+
+// Get a node's descendants (children, grandchildren, ...)
+$descendants = $node->getDescendants();
+
+// Ditto, but include the node itself
+$descendantsPlusSelf = $node->getDescendantsAndSelf();
+Accessing a node’s properties
+
+// Get a node's ID
+$id = $node->getId();
+
+// Get the node's hierarchical level (1-based)
+$level = $node->getLevel();
+
+// Access node properties using get() overloaded getters or __get():
+$value = $node->get('myproperty');
+$value = $node->myproperty;
+$value = $node->getMyProperty();
+
+// Get the node's properties as an associative array
+$array = $node->toArray();
+
+// Get a string representation (which will be the node ID)
+echo "$node";
+Example: Using it with a self-joined database table
+
+<?php
+
+require 'vendor/autoload.php';
+
+// Database setup (or use Doctrine or whatever ...)
+$db = new \PDO(...);
+
+// SELECT the records in the sort order you need
+$stm = $db->query('SELECT id, parent, title FROM tablename ORDER BY title');
+$records = $stm->fetchAll(PDO::FETCH_ASSOC);
+
+// Create the Tree instance
+$tree = new \ppphp\Tree($records);
+...
+...

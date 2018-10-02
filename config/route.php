@@ -1,0 +1,12 @@
+<?php
+router()
+	->error(405,'show_error')
+	->error(406,'show_error')
+	->get('post','post/:id:d','portal/post/post')
+    ->get('category','category/:slug','portal/post/category')
+    ->get('weixinqun','weixinqun/:id:d','weixinqun/index/weixinqun')
+    ->get('gzh','gzh/:id:d','weixinqun/index/gongzhonghao')
+    ->get('tags','tags/:name','weixinqun/index/tags')
+    ->get('fenlei','fenlei/:id:d','weixinqun/index/fenlei')
+    ->get('diqu','diqu/:id:d','weixinqun/index/diqu')
+	->run();

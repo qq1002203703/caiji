@@ -1,0 +1,42 @@
+{
+  "name": "dahulu/wephp",
+  "type": "framework",
+  "description": "PHP Framework",
+  "keywords": ["PHP framework"],
+  "homepage": "http://www.dahulu.cc/",
+  "license": "MIT",
+  "require": {
+    "php": ">=7.0",
+    "filp/whoops": "2.1.2",
+    "monolog/monolog": "~1.0",
+    "kphcdr/crypt": "^1.0",
+    "overtrue/wechat": "~4.0",
+    "facebook/webdriver": "^1.6",
+    "xparse/element-finder": "^0.3.1"
+  },
+  "autoload": {
+    "files": ["system/helper.php","system/init.php"],
+    "psr-4":{
+      "extend\\":"system/extend/",
+      "core\\":"system/core/",
+      "app\\":"app/",
+      "shell\\":"shell/"
+    }
+  },
+  "authors": [
+    {
+      "name": "LaoYang",
+      "email": "46502166@qq.com",
+      "homepage": "http://www.dahulu.cc"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packagist.phpcomposer.com"
+    },
+    {
+      "packagist": false
+    }
+  ]
+}

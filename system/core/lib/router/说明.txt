@@ -1,0 +1,107 @@
+基于：lloydzhou/router（https://github.com/lloydzhou/router），修改而成（原来只支持路由，不能访问系统控制器）
+一个及其精简的PHP路由控制器，如果有匹配的路由就按路由设置的进行回调函数，如果没有匹配的路由就按'模块/控制器/方法'的系统访问方式进行。
+如果匹配到URL，会找到对应的回调函数执行，能依据回调函数的参数列表自动从请求里面获取变量，还可以支持“编译”，将映射路由阶段的函数调用直接编译成PHP数组进行初始化，节省时间。
+注：如果按系统默认方式访问控制器，是不能自动获取回调函数的参数的
+
+【API说明】
+1、group/prefix($prefix, $hook)
+创建一组拥有相同URL前缀的路由。不传递参数，或者传递参数错误的时候，会将prefix设置成空字符串。 可以在定义group的时候，同时给这一组url定义相同的hook，会在调用match的时候合并到每一个url对应的hook里面，默认是空数组。
+
+2、match($method,$name, $path, $callback, $hook)
+依据传递的HTTP请求方法以及url路径生成路由映射树形结构体，在树节点中保存回调函数和需要处理的钩子函数；$name参数是给这个路由命名用的，方便后面输出对应的路由url
+
+3、get/post/put/delete/head/options($name, $path, $callback, $hook)
+get函数是对match函数的封装，直接使用'GET'作为第一个参数调用match方法。 同样的，也对post，put，delete，head，options等请求进行了封装。
+
+4、run()
+web程序入口，支持传递3个参数，不过参数是可选的。
+第一个参数$params会和请求体的变量进行合并，并且依次在各个钩子函数中进行传递。
+第二个和第三个参数是请求方法$method和请求地址$pathinfo，这两个参数是为了调试使用的，默认情况会自动获取。
+
+5、error()
+错误处理函数，有两种用法：
+    如果传递$error_code和$callback，那么会对相应的code设定回调处理函数
+    如果传递$error_code和其他的参数，会触发code对应的回调函数，并把后面的参数传递进去
+
+6、hook()
+钩子函数，也有两种用法：
+    如果传递$hook_name和$callback，那么会对相应的hook_name设定回调处理函数
+    如果传递$hook_name和其他的参数，会触发hook_name对应的回调函数，并把后面的参数传递进去
+    有两个比较特殊的钩子函数“before”，“after”，在控制器里面会自动的调用before和after两个钩子函数，分别在处理回调的前面和后面。
+    before这个钩子函数以及用户在match这个API里面针对这个API自定义的钩子函数会一次按照顺序执行。并且都会接受当前的$router对象作为参数，如果在某一个钩子函数返回false会触发406错误。用户可以在这些钩子函数里面对$router->params进行更改。
+    after这个钩子函数会自动在最后执行，并且会将主逻辑回调函数的返回值作为第一个参数，第二个参数是$router自身。
+
+7、参数验证
+使用ctype_前缀的系列函数验证pathinfo传递过来的参数
+例如:
+	如果定义了路由: "/hello/:name:a.json", 使用RUL: "/hello/lloyd.json"查找路由的时候，会调用"ctype_alpha"来验证"lloyd".
+	验证指令和ctype函数的映射表
+	A => ctype_alnum — 做字母和数字字符检测
+	a => ctype_alpha — 做纯字符检测
+	d => ctype_digit — 做纯数字检测
+	x => ctype_xdigit — 检测字符串是否只包含十六进制字符
+	l => ctype_lower — 做小写字符检测
+	u => ctype_upper — 做大写字母检测
+
+8、编译
+由于PHP程序执行的特殊性，每一次都会从头执行整个代码。所以当用户定义了一大堆的url映射之后，会调用很多次match函数生成路由映射表。
+但是，每一次请求只会映射到其中的一个回调函数里面。
+所以为了在生产环境中节省时间，就设计了编译这个功能。可以直接将映射好的路由表以及错误处理和钩子函数全部保存成PHP数组直接初始化成Router对象。省去了每次都需要创建这个树形结构体的时间。
+开发环境
+使用CRouter替换Router这个类
+$crouter = new CRouter("router.inc.php", true);
+
+9、生产环境
+直接包含编译好的类文件就好
+$router = include("router.inc.php");
+$router->run();
+
+【例子】
+
+(new CRouter('router.inc.php', true))
+->error(401, function($message){
+    header('Location: /login', true, 401);
+    die($message);
+})
+->error(405, function($message){
+    header('Location: /hello/world', true, 405);
+    die($message);
+})
+->error(406, function($message){
+    die($message);
+})
+->hook('auth', function($router){
+    if ('lloyd' == $router->params['name'])
+        return true;
+    $router->error(401, 'Forbiden');
+})
+->hook('after', function($result, $router){
+    if ($result) {
+        header('Content-type: application/'. (isset($_GET['jsoncallback'])?'javascript':'json'));
+        if (isset($_GET['jsoncallback']))
+            print $_GET['jsoncallback']. '('. json_encode($result). ')';
+        else print json_encode($result);
+    }
+})
+->hook('before', function($router){
+    //$params['name'] = 'lloydzhou';
+    return true;
+})
+->get('/', function(){
+    echo "Hello world !!!";
+})
+->match('post', '','por', function(){
+    echo "Good Lucky!";
+})
+->post('/hello', 'Handler@hello', 'auth')
+// using group API to set prefix of the pathinfo
+->group('/hello')
+    ->get('handler_hello','/:name', 'Handler@hello')
+    ->get('/:name/again', array('Handler', 'hello_again'), 'auth')
+// reset the prefix, or you can just set to another prefix
+->group()
+->get('/hello/:name:a/:ext', function($name, $ext){
+    if ('js' == $ext || 'json' == $ext) return array('name'=>$name);
+    return array('code'=>1, 'msg'=>'error message...');
+}, 'auth')
+->run(array(), php_sapi_name() == 'cli' ? 'GET' : null, php_sapi_name() == 'cli' ?  '/hello/lloyd.json': null);
