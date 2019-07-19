@@ -13,9 +13,10 @@ vendor/
 douban/
 data/
 cache/
+config/
+.gitignore
 sql/
 /composer.lock
-/.gitignore
 /Authentication
 /Password
 /Updating
@@ -24,3 +25,11 @@ sql/
 public/uploads/
 public/do.php
 public/test.php
+#tpl
+tpl/pc/fly/tmp/
+tpl/mobile/miniMobile/tmp/
+#图片
+!public/uploads/no.gif
+!public/uploads/nopic.gif
+!public/uploads/nopic2.gif
+!public/uploads/notpic.gif
