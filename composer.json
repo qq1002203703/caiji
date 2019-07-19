@@ -1,8 +1,8 @@
 {
   "name": "qq46502166/caiji",
-  "type": "framework,spider",
+  "type": "spider",
   "description": "PHP Framework and PHP spider",
-  "keywords": ["PHP framework,PHP spider"],
+  "keywords": ["PHP Spider Framework"],
   "homepage": "http://www.dahulu.cc/",
   "license": "MIT",
   "require": {

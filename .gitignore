@@ -31,5 +31,5 @@ tpl/mobile/miniMobile/tmp/
 #pic
 !public/uploads/images/no.gif
 !public/uploads/images/nopic.gif
-!/public/uploads/images/nopic2.gif
-!/public/uploads/images/notpic.gif
+!public/uploads/images/nopic2.gif
+!public/uploads/images/notpic.gif
