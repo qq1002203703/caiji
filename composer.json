@@ -4,6 +4,7 @@
   "description": "PHP Framework and PHP spider",
   "keywords": ["PHP Spider Framework"],
   "homepage": "http://www.dahulu.cc/",
+	"version":"4.0.0",
   "license": "MIT",
   "require": {
     "php": ">=7.0",
