@@ -12,25 +12,35 @@
 namespace core\caiji\normal;
 use core\Caiji;
 use extend\Curl;
+use extend\HttpClient;
+
 abstract class Base extends Caiji
 {
     /**
      * @var \extend\Curl
      */
     protected $curl;
+    /**
+     * @var \extend\HttpClient
+     */
+    protected $httpClient;
     protected  $repeatTimeTmp;
     //页数是否递进
-    protected $pageAdd=false;
+    protected $pageAdd=true;
     protected $errorCode=[];
-
+    /**
+     * @var array 其他需要保存到数据库的健值对：必须是关联数组，而且是数据库存在的字段作健名，否则保存时会出错
+     */
+    public $saveValue=[];
     //入口
-    public function start()
+    public function start($saveValue=[])
     {
+        if($saveValue){
+            $this->saveValue=$saveValue;
+        }
         $this->startEcho('Rule name:' . $this->option['name'] . ',callback:' . $this->option['callback']);
         try {
             $this->run();
-        }catch(\ErrorException $e){
-            $this->thowError($e);
         }catch (\Exception $e){
             $this->thowError($e);
         }catch (\Error $e){
@@ -46,6 +56,19 @@ abstract class Base extends Caiji
         $this->option['curl']['setting']= $this->option['curl']['setting'] ?? [];
         $this->option['curl']['options']= $this->option['curl']['options'] ?? [];
         $this->curl=New Curl($this->option['curl']['setting']);
+
+    }
+
+    /** ------------------------------------------------------------------
+     * httpClient初始化
+     *---------------------------------------------------------------------*/
+    protected function httpClientInit(){
+        $this->option['http']= $this->option['http'] ?? [];
+        $this->option['http']['setting']= $this->option['http']['setting'] ?? [];
+        $this->option['http']['options']= $this->option['http']['options'] ?? [];
+        $this->httpClient=New HttpClient($this->option['http']['setting']);
+        $this->httpClient->httpSetting($this->option['http']['options']);
+        $this->httpClient->stopFile=$this->stopFile;
     }
 
     protected function doLoop($query,$doFunc,$endEchoExp,$msg=''){
@@ -53,12 +76,13 @@ abstract class Base extends Caiji
             $perPage=1;
         else
             $perPage=20;
-        $start=0;
         do{
-            $data=$this->model->_sql($query['sql']." limit {$start},{$perPage}",$query['params'],false);
-            if($this->pageAdd){
-                $start+=$perPage;
-            }
+            $sql=$query['sql'];
+            if(isset($this->startId) && $this->startId>0)
+                $sql.=' and id >'.$this->startId;
+            if(isset($this->maxId) && $this->maxId>0 && $this->maxId >$this->startId )
+                $sql.=' and id <= '.$this->maxId;
+            $data=$this->model->_sql($sql." order by id limit {$perPage}",$query['params'],false);
             if($data){
                 foreach ($data as $k =>$v){
                     if ($this->checkStop()) {
@@ -93,4 +117,20 @@ abstract class Base extends Caiji
         }while($this->runOnce == false);
         return $this->isStop ? -1 : 0;
     }
+
+    /** ------------------------------------------------------------------
+     * 添加额外的健值对到数据中
+     * @param mixed $oldData 原来的数据
+     * @param string $keyName 当$oldData不是数组时的健名
+     *---------------------------------------------------------------------*/
+    protected function addSaveValue(&$oldData,$keyName='url'){
+        if(!$this->saveValue)
+            return;
+        if(!is_array($oldData))
+            $oldData[$keyName]=$oldData;
+        foreach ($this->saveValue as $k => $item){
+            $oldData[$k]=$item;
+        }
+    }
+
 }

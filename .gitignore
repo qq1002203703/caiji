@@ -7,10 +7,20 @@ Desktop.ini
 
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
-/.project
-/.settings
-/composer.lock
-/.buildpath
-/vendor
+
 .idea/
-/cache
+vendor/
+douban/
+data/
+cache/
+sql/
+/composer.lock
+/.gitignore
+/Authentication
+/Password
+/Updating
+/Username
+#public
+public/uploads/
+public/do.php
+public/test.php

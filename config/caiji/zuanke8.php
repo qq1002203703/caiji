@@ -27,11 +27,11 @@ return [
         //string 起始页url 后面参数 第0项（0为公差，1为公比，2字母），第1项（开始页数），第2项（总页数）第3项：步进（公差或公比数），第4项是否不倒转(默认0倒转),第5项：是否补零(默认不补)，
         //'url'=>'http://www.anyv.net/index.php/categoryyuedu-19-page-{%0,1,40236,1,0,0%}',
         'type'=>1, //种类
-        'retimes'=>5000,//重复多少次停止
+        'retimes'=>500,//重复多少次停止
         'outType'=>2,//输出方式（1或2），默认为2时重要信息保存日志，为1直接输出
         'plugSave'=>'\shell\caiji\plugin\Save::zuanke8',
-        'plugBeforCaiji'=>'',
-        'plugBeforSelector'=>'',
+        'plugBeforeCaiji'=>'',
+        'plugBeforeSelector'=>'',
         'plugCheckLogin'=>'',
         'curl'=>[],
         'rules'=>[
@@ -234,7 +234,7 @@ return [
                         'reg{%|||%}/\{:[^:\}]*:\}/{%|||%}',
                         'trim{%|||%}x',
                         'replace{%|||%}赚客吧{%|||%}u惠吧',
-                        'leng{%|||%}5'
+                        'length{%|||%}5'
                     ]
                 ],
                 'files'=>[
@@ -250,6 +250,12 @@ return [
 
     ],
     'fabu'=>[
-
+        'run_max'=>0,//每次发布的条数，0表示不限制
+        'plug'=>[],//插件
+        'target'=>'http://www.uuhuihui.com/bbs/fabu/start?pwd=Djidksl$$EER4ds58cmO', //发布的目标
+        'fields'=>'login,update_time',
+        //'where1'=>' WHERE isfabu=0 and iscaiji=1 and isdownload=1 and isend=1 and isshenhe=1 and islaji=0',
+        'where1'=>' WHERE isfabu=0 and iscaiji=1 and isdownload=1 and isend=1 and islaji=0',
+        'where2'=> [['isfabu','eq',0],['iscaiji','eq',1],['isdownload','eq',1],['isend','eq',1],['islaji','eq',0]],
     ]
 ];

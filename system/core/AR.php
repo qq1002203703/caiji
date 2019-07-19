@@ -17,25 +17,27 @@ use extend\Helper;
 /**
  * Class AR
  * @package core
- * @method AR from(string $table)
- * @method AR select(string ... $fiel)
- * @method AR where(string $str)
- * @method AR eq(string $fiel,string|int $value)
- * @method  AR ne(string $fiel,string|int $value)
- * @method  AR gt(string $fiel,string|int $value)
- * @method  AR lt(string $fiel,string|int $value)
- * @method AR in(string $fiel,array $value)
- * @method AR like(string $fiel,string $value)
- * @method AR notlike(string $fiel,string $value)
- * @method  AR limit(int $start,int $num=0) 只传一个参数时，是查询多少条，传两个参数时是查询从$start开始返回$num条
- * @method AR order(string $order)
- * @method AR group(string $group)
+ * @method $this select(string ... $field)
+ * @method $this from(string $table)
+ * @method $this where(string $str)
+ * @method $this eq(string $field,string|int $value)
+ * @method $this ne(string $field,string|int $value)
+ * @method $this gt(string $field,string|int $value)
+ * @method $this gte(string $field,string|int $value)
+ * @method $this lt(string $field,string|int $value)
+ * @method $this lte(string $field,string|int $value)
+ * @method $this in(string $field,array $value)
+ * @method $this like(string $field,string $value)
+ * @method $this notlike(string $field,string $value)
+ * @method $this limit(int $start,int $num=0) 只传一个参数时，是查询多少条，传两个参数时是查询从$start开始返回$num条
+ * @method $this order(string $order)
+ * @method $this group(string $group)
  */
 abstract class AR extends Base {
 
 	public $data = array();
     /**
-     * @var \PDO  static property to connect database.
+     * @var  \PDO  static property to connect database.
      */
     public static $db;
     /**
@@ -72,7 +74,7 @@ abstract class AR extends Base {
         'from' => 'FROM',
         'set' => 'SET',
         'where' => 'WHERE',
-        'group' => 'GROUP BY','groupby' => 'GROUP BY',
+        'groupList' => 'GROUP BY','groupby' => 'GROUP BY',
         'having' => 'HAVING',
         'order' => 'ORDER BY','orderby' => 'ORDER BY',
         'limit' => 'limit',
@@ -83,7 +85,7 @@ abstract class AR extends Base {
      */
     public static $defaultSqlExpressions = array('expressions' => array(), 'wrap' => false,
         'select'=>null, 'insert'=>null, 'update'=>null, 'set' => null, 'delete'=>'DELETE ', 'join' => null,
-        'from'=>null, 'values' => null, 'where'=>null, 'having'=>null, 'limit'=>null, 'order'=>null, 'group' => null);
+        'from'=>null, 'values' => null, 'where'=>null, 'having'=>null, 'limit'=>null, 'order'=>null, 'groupList' => null);
     /**
      * @var array Stored the Expressions of the SQL. 
      */
@@ -120,7 +122,7 @@ abstract class AR extends Base {
     const HAS_MANY = 'has_many';
     const HAS_ONE = 'has_one';
     /**
-     * @var array，是一个二维的关联数组，储存与本数据表关联的其它数据表的信息，进而通过getRelation()方法建立自动的影射
+     * @var array 是一个二维的关联数组，储存与本数据表关联的其它数据表的信息，进而通过getRelation()方法建立自动的影射
      * 书写格式：每一个关联表最多有6个选项，最少需要提供前面4项，后面2个选项是可选项
      * 第一项 string：self::HAS_ONE，self::HAS_MANY，self::BELONGS_TO中的一种
      * 第二项 string：数据表名
@@ -180,11 +182,11 @@ abstract class AR extends Base {
      * function to find one record and assign in to current object.
      * @param int $id If call this function using this param, will find record by using this id. If not set, just find the first record in database.
      * @param $return_array bool
-     * @return bool|AR if find record, assign in to current object and return it, other wise return "false".
+     * @return array|bool|AR if find record, assign in to current object and return it, other wise return "false".
      */
     public function find($id = null ,$return_array=false) {
         if ($id) $this->reset(false)->eq($this->primaryKey, $id);
-        return self::_query($this->limit(1)->_buildSql(array('select', 'from', 'join', 'where', 'group', 'having', 'order', 'limit')), $this->params, $this->reset(false), true,$return_array);
+        return self::_query($this->limit(1)->_buildSql(array('select', 'from', 'join', 'where', 'groupList', 'having', 'order', 'limit')), $this->params, $this->reset(false), true,$return_array);
     }
     /**
      * function to find all records in database.
@@ -192,13 +194,13 @@ abstract class AR extends Base {
      * @return array return array of ActiveRecord
      */
     public function findAll($return_array=false) {
-        return self::_query($this->_buildSql(array('select', 'from', 'join', 'where', 'group', 'having', 'order', 'limit')), $this->params, $this->reset(false),false,$return_array);
+        return self::_query($this->_buildSql(array('select', 'from', 'join', 'where', 'groupList', 'having', 'order', 'limit')), $this->params, $this->reset(false),false,$return_array);
     }
 
     /**
      * 执行delete sql语句：不提供参数，会偿试从当前AR对象中获取主键值，否则从参数中获取主键值；有主键值后就可以不用where语句了
-     * @param array $data：包含主键的值
-     * @return int：返回受影响的行数
+     * @param array $data 包含主键的值
+     * @return int|bool 返回受影响的行数
      */
     public function delete($data=array()) {
         if(empty($data)){
@@ -215,8 +217,8 @@ abstract class AR extends Base {
 
     /**
      * 执行update sql语句进行数据库更新：会自动从数据中获取主键值，所以如果数据中包含了主键的值，那么前面就可以不用where语句了
-     * @param array $data：数据
-     * @return AR|int|bool：1、不提供参数数据时，如果原AR对象没有数据就返回false,否则返回执行update后的AR对象；2、提供参数数据时，如果参数格式不正确返回false,否则返回执行update后受影响的行数
+     * @param array $data 数据
+     * @return AR|int|bool 1、不提供参数数据时，如果原AR对象没有数据就返回false,否则返回执行update后的AR对象；2、提供参数数据时，如果参数格式不正确返回false,否则返回执行update后受影响的行数
      */
     public function update($data=array()) {
         if(empty($data)){
@@ -228,8 +230,11 @@ abstract class AR extends Base {
             self::execute($this->_buildSql(array('update', 'set', 'where')), $this->params,$this);
             return $this->dirty()->reset(false);
         }else{
-            if(Helper::check_array_type($data) !=2 )  return false;
+            if(Helper::check_array_type($data) !== 2 )  return false;
             foreach($data as $field => $value) $this->addCondition($field, '=', $value, ',' , 'set');
+            if(isset($data[$this->primaryKey])){
+                $this->eq($this->primaryKey, $data[$this->primaryKey]);
+            }
             $ret= self::execute($this->_buildSql(array('update', 'set', 'where')), $this->params,$this);
             $this->reset(false);
             return $ret;
@@ -238,13 +243,14 @@ abstract class AR extends Base {
     /**
      * 把数据插入到数据库中，不提供参数数据时，会获取当前AR对象中的数据插入到数据库中
      * @param array $data：数据
-     * @return bool|AR|int|string：插入失败时返回false,插入成功按下面处理：1、不提供参数数据时，成功返加当前AR对象，但会把最后插入行的ID或序列值保存到$this->{$this->primaryKey}中。2、提供参数时，如果存在最后插入行的ID或序列值，就返回它，否则就返回true
+     * @return bool|AR|int|string 插入失败时返回false,插入成功按下面处理：1、不提供参数数据时，成功返加当前AR对象，但会把最后插入行的ID或序列值保存到$this->{$this->primaryKey}中。2、提供参数时，如果存在最后插入行的ID或序列值，就返回它，否则就返回false
      */
     public function insert($data =array()) {
         if(empty($data)){
             if (count($this->dirty) == 0) return true;
             $value = $this->_filterParam($this->dirty);
-            $this->insert = new Expressions(array('operator'=> 'INSERT INTO '. self::$prefix . $this->table,
+            $table=$this->from!=null ?$this->from->data['target'] : self::$prefix.$this->table;
+            $this->insert = new Expressions(array('operator'=> 'INSERT INTO '. $table,
                                                   'target' => new WrapExpressions(array('target' => array_keys($this->dirty)))));
             $this->values = new Expressions(array('operator'=> 'VALUES', 'target' => new WrapExpressions(array('target' => $value))));
             $result=self::execute($this->_buildSql(array('insert', 'values')), $this->params,$this);
@@ -256,11 +262,11 @@ abstract class AR extends Base {
         }else{
             if(Helper::check_array_type($data) !=2 )  return false;
             $value = $this->_filterParam($data);
-            $this->insert = new Expressions(array('operator'=> 'INSERT INTO '. self::$prefix . $this->table,
+            $table=$this->from !=null ?$this->from->data['target'] : self::$prefix.$this->table;
+            $this->insert = new Expressions(array('operator'=> 'INSERT INTO '. $table,
                                                   'target' => new WrapExpressions(array('target' => array_keys($data)))));
             $this->values = new Expressions(array('operator'=> 'VALUES', 'target' => new WrapExpressions(array('target' => $value))));
             $result=self::execute($this->_buildSql(array('insert', 'values')), $this->params,$this);
-
             $this->reset(false);
             if($result >0 ){
                 $inserId=self::$db->lastInsertId();
@@ -281,9 +287,15 @@ abstract class AR extends Base {
 		if($obj && $obj->debug) $obj->sqlCache[] = $sql;
         $sth = self::$db->prepare($sql);
         if($sth && $sth->execute($param)){
+            //self::$db->lastInsertId();
             return $sth->rowCount();
+        }else{
+            echo $sql.PHP_EOL;
+            var_dump($param);
+            var_dump($sth->errorInfo());
+            return false;
         }
-        throw new \Exception($sth->errorInfo()[2]);
+        //throw new \Exception($sth->errorInfo()[2]);
     }
     /**
      * 通过POD预处理方式执行sql查询语句，没有结果集的sql语句最好用execute()函数
@@ -293,7 +305,7 @@ abstract class AR extends Base {
      * @param bool $single if set to true, will find record and fetch in current object, otherwise will find all records.
      * @return bool|AR|array
      */
-    public static function _query($sql, $param = array(), $obj, $single=false,$return_array=false) {
+    public static function _query($sql, $param, $obj, $single=false,$return_array=false) {
 		$obj ->debug && $obj ->sqlCache[] = $sql;
         if ($sth = self::$db->prepare($sql)) {
 			//返回数组形式结果集
@@ -327,7 +339,7 @@ abstract class AR extends Base {
      * @param string $name string：The name of the relation,$this->relation的一个键名.
      * @return AR object|array
      */
-    protected function & getRelation($name) {
+    protected function &getRelation($name) {
         $relation = $this->relations[$name];
         if ($relation instanceof self || (is_array($relation) && $relation[0] instanceof self))
             return $relation;
@@ -363,12 +375,14 @@ abstract class AR extends Base {
      * @param string $n The SQL part will be build.
      * @param int $i The index of $n in $sqls array.
      * @param AR $o The refrence to $this
-     * @return string 
      */
     private function _buildSqlCallback(&$n, $i, $o){
         //if ('select' === $n && null == $o->$n) $n = strtoupper($n). ' '. $o::$prefix . $o->table.'.*';
         if ('select' === $n && null == $o->$n) $n = strtoupper($n). ' *';
-        elseif (('update' === $n||'from' === $n) && null == $o->$n) $n = strtoupper($n).' '. $o::$prefix.$o->table;
+        elseif ('from' === $n && null == $o->$n) $n = strtoupper($n).' '. self::$prefix.$o->table;
+        elseif ('update' === $n){
+            $n=($this->from !=null) ? strtoupper($n).' '.$this->from->data['target'] : strtoupper($n).' '. self::$prefix.$o->table;
+        }
         elseif ('delete' === $n) $n = strtoupper($n). ' ';
         else $n = (null !== $o->$n) ? $o->$n. ' ' : '';
     }
@@ -389,14 +403,13 @@ abstract class AR extends Base {
      * @return mixed Return the result of callback or the current object to make chain method calls.
      */
     public function __call($name, $args) {
-
         if (is_callable($callback = array(self::$db,$name)))
             return call_user_func_array($callback, $args);
         if (in_array($name = strtolower($name), array_keys(self::$operators)))
              $this->addCondition($args[0], self::$operators[$name], isset($args[1]) ? $args[1] : null, (is_string(end($args)) && 'or' === strtolower(end($args))) ? 'OR' : 'AND');
          else if (in_array($name= str_replace('by', '', $name), array_keys(self::$sqlParts))){
              if($args=implode(', ', $args)){
-                if('from'==strtolower($name)) $args=self::$prefix.$args;
+                if('from'==strtolower($name)|| 'newtable'==strtolower($name)) $args=self::$prefix.$args;
                 $this->$name = new Expressions(array('operator'=>self::$sqlParts[$name], 'target' => $args));
              }
          }
@@ -548,8 +561,12 @@ abstract class AR extends Base {
 	public function getFieldsName($table=''){
 	    if(!$table)
 	        $table=self::$prefix.$this->table;
+	    else
+            $table=self::$prefix.$table;
         $sth = self::$db->prepare('DESCRIBE '.$table);
         $sth->execute();
         return $sth->fetchAll(\PDO::FETCH_COLUMN);
     }
+
+
 }

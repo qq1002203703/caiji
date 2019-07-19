@@ -1,0 +1,14 @@
+/*可以在这里添加你自己的css*/
+img {max-width:100%;height:auto;}
+body{line-height:22px;font-size:16px;color:#666}
+h1, h2, h3,h4,h5,h6{font-weight:500;color:#333}
+h1{font-size:26px}
+h2{font-size:22px}
+h3{font-size:20px}
+h4,h5,h6{font-size:18px}
+.view {word-break: break-all;}
+.vote_area {display: block;}
+.vote_iframe {background-color: transparent;border: 0 none;height: 100%;}
+#edui1_imagescale{display:none !important;} /*去除点击图片后出现的拉伸边框*/
+a{color:#009688;text-decoration : none}
+a:hover{color:#117700;}

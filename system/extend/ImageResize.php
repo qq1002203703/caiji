@@ -61,8 +61,7 @@ class ImageResize
         if (empty($image_data) || $image_data === null) {
             throw new Exception('image_data must not be empty');
         }
-        $resize = new self('data://application/octet-stream;base64,' . base64_encode($image_data));
-        return $resize;
+        return new self('data://application/octet-stream;base64,' . base64_encode($image_data));
     }
     /**
      * Add filter function for use right before save image to file.
@@ -78,8 +77,8 @@ class ImageResize
     /**
      * Apply filters.
      *
-     * @param $image resource an image resource identifier
-     * @param $filterType filter type and default value is IMG_FILTER_NEGATE
+     * @param resource $image  an image resource identifier
+     * @param int $filterType filter type and default value is IMG_FILTER_NEGATE
      */
     protected function applyFilter($image, $filterType = IMG_FILTER_NEGATE)
     {
@@ -123,6 +122,7 @@ class ImageResize
             $this->msg='Unsupported file type';
             return false;
         }
+        finfo_close($finfo);
         //if (!$image_info = getimagesize($filename, $this->source_info)) {
         $image_info = getimagesize($filename);
         //}
@@ -137,7 +137,7 @@ class ImageResize
             ) = $image_info;
         switch ($this->source_type) {
             case IMAGETYPE_GIF:
-                $this->source_image = imagecreatefromgif($filename);
+                $this->source_image = @imagecreatefromgif($filename);
                 break;
             case IMAGETYPE_JPEG:
                 $this->source_image = $this->imageCreateJpegfromExif($filename);
@@ -146,7 +146,7 @@ class ImageResize
                 $this->original_h = imagesy($this->source_image);
                 break;
             case IMAGETYPE_PNG:
-                $this->source_image = imagecreatefrompng($filename);
+                $this->source_image = @imagecreatefrompng($filename);
                 break;
             case IMAGETYPE_BMP:
                 $jpg=$this->bmp2imge($filename);
@@ -184,6 +184,7 @@ class ImageResize
         }
         return true;
     }
+
     public function getMsg(){
         return $this->msg;
     }
@@ -272,7 +273,6 @@ class ImageResize
         imageinterlace($dest_image, $this->interlace);
 
         imagegammacorrect($this->source_image, 2.2, 1.0);
-
         imagecopyresampled(
             $dest_image,
             $this->source_image,
@@ -320,7 +320,7 @@ class ImageResize
         if ($permissions) {
             chmod($filename, $permissions);
         }
-        imagedestroy($dest_image);
+        @imagedestroy($dest_image);
         return $this;
     }
     /**
@@ -532,8 +532,8 @@ class ImageResize
      *
      * @param integer $width
      * @param integer $height
-     * @param integer $x
-     * @param integer $y
+     * @param integer|bool $x
+     * @param integer|bool $y
      * @return static
      */
     public function freecrop($width, $height, $x = false, $y = false)
@@ -844,6 +844,10 @@ class ImageResize
         return $im;
     }
 
+    public function destroy(){
+        @imagedestroy($this->source_image);
+    }
+
     /** ------------------------------------------------------------------
      * 获取图片扩展名，只能读出这几种格式 jpeg|png|gif|webp|bmp 的图片
      * @param string $filename
@@ -876,6 +880,5 @@ class ImageResize
                 return '';
         }
     }
-
 
 }

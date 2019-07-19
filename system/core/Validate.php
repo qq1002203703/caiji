@@ -50,8 +50,8 @@ class Validate
         'integer'     => ':attribute 必须是整数',
         'float'       => ':attribute 必须是浮点数',
         'boolean'     => ':attribute 必须是布尔值',
-        'email'       => ':attribute 邮箱格式不符',
-        'mobile'      => ':attribute 手机号码格式不符',
+        'email'       => ':attribute 格式不符',
+        'mobile'      => ':attribute 格式不符',
         'array'       => ':attribute 必须是数组',
         'accepted'    => ':attribute 必须是yes、on或者1',
         'date'        => ':attribute 不是一个有效的日期或时间格式',
@@ -285,7 +285,7 @@ class Validate
      * 指定需要验证的字段列表
      * @access public
      * @param  array $fields  字段名
-     * @return $this
+     * @return Validate $this
      */
     public function only($fields)
     {
@@ -683,7 +683,7 @@ class Validate
                 $result = $value instanceof File && in_array($this->getImageType($value->getRealPath()), [1, 2, 3, 6]);
                 break;
             case 'token':
-                $result = $this->token($value, '__token__', $data);
+                $result = $this->token($value, '__token__');
                 break;
             default:
                 if (isset(self::$type[$rule])) {
@@ -1200,26 +1200,26 @@ class Validate
      * 验证表单令牌
      * @access public
      * @param  mixed     $value  字段值
-     * @param  mixed     $rule  验证规则
+     * @param  mixed     $rule  token在session中的键名 为空时为 '__token__'
      * @param  array     $data  数据
      * @return bool
      */
-    public function token($value, $rule, $data)
+    public function token($value, $rule)
     {
         $rule    = !empty($rule) ? $rule : '__token__';
-        $session = Container::get('session');
-        if (!isset($data[$rule]) || !$session->has($rule)) {
+        $sessionValue=Session::get($rule,false);
+        if ($sessionValue===false) {
             // 令牌数据无效
             return false;
         }
         // 令牌验证
-        if (isset($data[$rule]) && $session->get($rule) === $data[$rule]) {
+        if ( $sessionValue === $value) {
             // 防止重复提交
-            $session->delete($rule); // 验证完成销毁session
+            Session::del($rule); // 验证完成销毁session
             return true;
         }
-        // 开启TOKEN重置
-        $session->delete($rule);
+        //开启TOKEN重置
+        Session::del($rule);
         return false;
     }
     // 获取错误信息
@@ -1296,7 +1296,7 @@ class Validate
      * 获取数据验证的场景
      * @access protected
      * @param  string $scene  验证场景
-     * @return void
+     * @return mixed
      */
     protected function getScene($scene = '')
     {

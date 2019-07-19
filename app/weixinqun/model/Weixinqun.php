@@ -47,7 +47,7 @@ class Weixinqun extends \core\Model
             $ret['username']=$this->_sqlField('username','select username from '.self::$prefix.'user WHERE id=?',[$ret['uid']],false);
         }
         if(isset($ret['city_id'])){
-            $ret['city_name']=$this->_sqlField('name','select name from '.self::$prefix.'citys WHERE id=?',[$ret['city_id']],false);
+            $ret['city_name']=$this->_sqlField('name','select name from '.self::$prefix.'city WHERE id=?',[$ret['city_id']],false);
         }
         if(isset( $ret['category_id'])){
             $ret['category_name']=$this->_sqlField('name','select name from '.self::$prefix.'category WHERE id=?',[$ret['category_id']],false);
@@ -142,7 +142,7 @@ class Weixinqun extends \core\Model
     public function getCityId($name,$default=110100){
         if(!$name)
             return $default;
-        $id=$this->_sqlField('id','select id from '.self::$prefix.'citys where  level=2 and name like ? order by id desc',['%'.$name.'%'],false);
+        $id=$this->_sqlField('id','select id from '.self::$prefix.'city where  level=2 and name like ? order by id desc',['%'.$name.'%'],false);
         if($id)
             return $id;
         return $default;
@@ -154,7 +154,7 @@ class Weixinqun extends \core\Model
      * @return string
      *---------------------------------------------------------------------*/
     public function getCityName($id){
-        return $this->_sqlField('name','select name from '.self::$prefix.'citys where id= ?',[$id],false) ?? '';
+        return $this->_sqlField('name','select name from '.self::$prefix.'city where id= ?',[$id],false) ?? '';
     }
 
     /** ------------------------------------------------------------------
@@ -196,41 +196,37 @@ class Weixinqun extends \core\Model
      * @return string
      *---------------------------------------------------------------------*/
     public function getTagName($oid){
-        $data=$this->_sql('select t.name,t.id from '.self::$prefix.'tag_relation as r left join '.self::$prefix.'tag as t on r.tid=t.id where r.oid=? and r.type=?',[$oid,'weixinqun'],false,false);
-        if($data){
-            $ret='';
-            foreach ($data as $v){
-                $ret.='<a href="'.url('@tags@',['name'=>urlencode($v['name'])]).'">'.$v['name'].'</a>';
-            }
-            return $ret;
-        }
-        return '';
+        return $this->_sql('select t.name,t.id,t.slug from '.self::$prefix.'tag_relation as r left join '.self::$prefix.'tag as t on r.tid=t.id where r.oid=? and r.type=?',[$oid,'weixinqun'],false,false);
     }
 
     /** ------------------------------------------------------------------
      * 随机获取N条记录
      * @param int $limit:获取记录数
-     * @param string $format：开头和结尾格式化标签，例'<li>@</li>'，'<div class="myclass">@</div>'
-     * @param string $type: 输出类型 'img':图片，'text':文本，其它图文，默认输出图文
+     * @param string $format
      * @return string
      *---------------------------------------------------------------------*/
-    public function getRandomItem($limit,$format='<li>@</li>',$type=''){
-        $data=$this->_sql('SELECT * FROM `'.self::$prefix.'weixinqun` WHERE id >= (SELECT floor(RAND() * (SELECT MAX(id) FROM `'.self::$prefix.'weixinqun` where have_img=1 and caiji_isfabu=1))) and have_img=1 and caiji_isfabu=1 ORDER BY id LIMIT '.$limit,[],false);
+    public function getRandomItem($limit,$format='<li><a href="{%url%}"><img src="{%thumb%}">{%id%}.{%title%}</a></li>',$length=50){
+        //$data=$this->_sql('SELECT * FROM `'.self::$prefix.'weixinqun` WHERE id >= (SELECT floor(RAND() * (SELECT MAX(id) FROM `'.self::$prefix.'weixinqun` where have_img=1 and caiji_isfabu=1))) and have_img=1 and caiji_isfabu=1 ORDER BY id LIMIT '.$limit,[],false);
+        $data=$this->_sql('SELECT * FROM `'.self::$prefix.'weixinqun` WHERE id >= (SELECT floor(RAND() * (SELECT MAX(id) FROM `'.self::$prefix.'weixinqun` ))) ORDER BY id LIMIT '.$limit,[],false);
         if(!$data)
             return '';
         $ret='';
-        list($tagStart,$tagEnd)=explode('@',$format);
         foreach ($data as $v){
-            switch ($type){
-                case 'img':
-                    $ret.=$tagStart.'<a class="img" title="'.$v['title'].'" href="'.url('@weixinqun@',['id'=>$v['id']]).'"><img alt="'.$v['title'].'" src="'.$this->getImg(['qrcode'=>$v['qrcode'],'qun_qrcode'=>$v['qun_qrcode'],'thumb'=>$v['thumb']],'thumb').'"></a>'.$tagEnd;
-                    break;
-                case 'text':
-                    $ret.=$tagStart.'<a title="'.$v['title'].'" href="'.url('@weixinqun@',['id'=>$v['id']]).'">'.$v['title'].'</a>'.$tagEnd;
-                    break;
-                default:
-                    $ret.=$tagStart.'<a class="img" title="'.$v['title'].'" href="'.url('@weixinqun@',['id'=>$v['id']]).'"><img alt="'.$v['title'].'" src="'.$this->getImg(['qrcode'=>$v['qrcode'],'qun_qrcode'=>$v['qun_qrcode'],'thumb'=>$v['thumb']],'thumb').'"></a><span><a title="'.$v['title'].'" href="'.url('@weixinqun@',['id'=>$v['id']]).'">'.$v['title'].'</a></span>'.$tagEnd;
-            }
+            $ret.=str_replace([
+                '{%url%}',
+                '{%title%}',
+                '{%qun_qrcode%}',
+                '{%qrcode%}',
+                '{%id%}',
+                '{%content%}'
+            ],[
+                url('@weixinqun@',['id'=>$v['id']]),
+                $v['title'],
+                $v['qun_qrcode']?:'/uploads/images/no.gif',
+                $v['qrcode']?:'/uploads/images/no.gif',
+                $v['id'],
+                mb_substr(strip_tags($v['content']),0,$length),
+            ],$format);
         }
         return $ret;
     }

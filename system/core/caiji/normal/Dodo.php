@@ -363,10 +363,10 @@ class Dodo extends Base
     /** ------------------------------------------------------------------
      * 任务结束输出
      * @param string $msg
-     * @param array $exp
+     * @param array $exp  Remaining:'.($exp-$msg).'
      *---------------------------------------------------------------------*/
     protected function endEcho($msg,$exp=[]){
-        $this->outPut($msg.'This time had handled:'.$this->total['all'].'. Remaining:'.($exp-$msg).' ; '.date('Y-m-d H:i:s').PHP_EOL,true);
+        $this->outPut($msg.'This time had handled:'.$this->total['all'].' ; '.date('Y-m-d H:i:s').PHP_EOL,true);
     }
 
     /** ------------------------------------------------------------------

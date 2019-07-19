@@ -1,3 +1,0 @@
-post<br>
-<?=$aaa?><br>
-<?=$bbb?><br>

@@ -1,0 +1,63 @@
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_11_t_2.html" title="北京市小学">北京市</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_12_t_2.html" title="天津市小学">天津市</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_50_t_2.html" title="重庆市小学">重庆市</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_31_t_2.html" title="上海市小学">上海市</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_13_t_2.html" title="河北省小学">河北省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_14_t_2.html" title="山西省小学">山西省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_21_t_2.html" title="辽宁省小学">辽宁省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_22_t_2.html" title="吉林省小学">吉林省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_23_t_2.html" title="黑龙江小学">黑龙江</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_32_t_2.html" title="江苏省小学">江苏省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_33_t_2.html" title="浙江省小学">浙江省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_34_t_2.html" title="安徽省小学">安徽省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_35_t_2.html" title="福建省小学">福建省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_36_t_2.html" title="江西省小学">江西省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_37_t_2.html" title="山东省小学">山东省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_41_t_2.html" title="河南省小学">河南省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_42_t_2.html" title="湖北省小学">湖北省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_43_t_2.html" title="湖南省小学">湖南省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_44_t_2.html" title="广东省小学">广东省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_45_t_2.html" title="广西小学">广西</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_46_t_2.html" title="海南省小学">海南省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_15_t_2.html" title="内蒙古小学">内蒙古</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_51_t_2.html" title="四川省小学">四川省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_52_t_2.html" title="贵州省小学">贵州省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_53_t_2.html" title="云南省小学">云南省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_61_t_2.html" title="陕西省小学">陕西省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_62_t_2.html" title="甘肃省小学">甘肃省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_63_t_2.html" title="青海省小学">青海省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_64_t_2.html" title="宁夏小学">宁夏</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_65_t_2.html" title="新疆小学">新疆</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_54_t_2.html" title="西藏小学">西藏</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_71_t_2.html" title="台湾省小学">台湾省</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_81_t_2.html" title="香港小学">香港</a></ol>
+<ol><a href="http://xuexiao.51sxue.com/schoolByArea/areaCodeS_82_t_2.html" title="澳门小学">澳门</a></ol>
+ $match=[
+            0 => [
+                "name" => "巢湖市",
+                "from_id" => "3414",
+                ],
+
+
+  1=> [
+                "name" =>  "菏泽市",
+                "from_id" => 717
+
+  ],
+  2=> array(
+                "name" => "襄阳市",
+                "from_id"=> "4206"
+    ),
+  3 => array(
+                "name" => "铜仁市",
+                "from_id" =>  "5222"
+    ),
+  4=> array(
+                "name" =>  "毕节市",
+                "from_id" => "5224"
+    ),
+  5 =>  array(
+                "name" =>  "海东市",
+                "from_id" =>  "6321",
+  )
+];

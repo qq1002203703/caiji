@@ -12,6 +12,8 @@
  * ======================================*/
 
 namespace extend;
+use core\Conf;
+
 /**
  * Class Curl
  * @package extend
@@ -50,9 +52,9 @@ class Curl
         //CURLOPT_REFERER=>'',
         //是否返回头部
         CURLOPT_HEADER=>false,
-        //cURL函数执行的最长秒数
+        //cURL函数执行的最长秒数,设置允许请求的最长时间 从服务器接收缓冲到完成需要等待多长时间（单位秒）
         CURLOPT_TIMEOUT=>15,
-        //在尝试连接时等待的秒数
+        //在尝试连接时等待的秒数,在成功连接服务器前最大的等待时间，服务器必须在这个时间内作出响应（单位秒）
         CURLOPT_CONNECTTIMEOUT=>7,
         //不直接输出结果
         CURLOPT_RETURNTRANSFER=> 1,
@@ -77,11 +79,16 @@ class Curl
         $this->tryTimes=$setting['tryTimes'] ?? 3;
         $this->login=$setting['login'] ?? false;
         $this->match=$setting['match'] ?? '';
-        if(isset($setting['timeOut']) && $setting['timeOut'])
-            $this->timeOut=$setting['timeOut'];
-        if(isset($setting['opt']) && $setting['opt'] ){
-            $this->options=$setting['opt']+$this->options;
-        }
+        //if(isset($setting['timeOut']) && $setting['timeOut'])
+            //$this->timeOut=$setting['timeOut'];
+        //if(isset($setting['proxy']) && $setting['proxy'])
+            //$this->setProxy($setting['proxy']);
+        if(isset($setting['cookieFile']) && $setting['cookieFile'])
+            $this->setCookie($setting['cookieFile'],true);
+        if(isset($setting['header']) && $setting['header'])
+            $this->setHeader($setting['header']);
+        if(isset($setting['opt']) && $setting['opt'] )
+            $this->setOptions($setting['opt']);
     }
 
     /** ------------------------------------------------------------------
@@ -153,7 +160,7 @@ class Curl
         do{
             $ret = curl_exec($ch);
             $i++;
-        }while ($ret === false && $i <= $this->tryTimes && sleep(1) !==false);
+        }while ($ret === false && $i <= $this->tryTimes && (usleep(100000) || true));
         $this->info = curl_getinfo( $ch );
         //如果获取失败
         if ($ret===false) {
@@ -161,6 +168,7 @@ class Curl
         }
         curl_close($ch);
         if ($ret===false) {
+            //dump($this->info);
             return false;
         }
         //登陆检测
@@ -172,11 +180,8 @@ class Curl
         }
         return $ret;
     }
+
     protected function init($url){
-        if($this->timeOut && is_array($this->timeOut)){
-            $this->options[CURLOPT_CONNECTTIMEOUT]=$this->timeOut[0];
-            $this->options[CURLOPT_TIMEOUT]=$this->timeOut[1];
-        }
         if(substr($url,0,5)=='https'){
             $this->options[CURLOPT_SSL_VERIFYPEER]=false;
             $this->options[CURLOPT_SSL_VERIFYHOST]=0;
@@ -222,6 +227,8 @@ class Curl
             }
         }
         $fp = fopen($saveFile, 'wb');
+        if($fp===false)
+            die('无法打开文件');
         $this->options[CURLOPT_FILE]=$fp;
         $ret=$this->request($url,$method,$data);
         fclose($fp);
@@ -266,7 +273,8 @@ class Curl
         else
             $this->options[CURLOPT_PROXYPORT]=80;
         //可以是 CURLPROXY_HTTP (默认值) CURLPROXY_SOCKS4、 CURLPROXY_SOCKS5、 CURLPROXY_SOCKS4A 或 CURLPROXY_SOCKS5_HOSTNAME。
-        $this->options[CURLOPT_PROXYTYPE]=$proxy['type'] ?? CURLPROXY_HTTP;
+        $proxy['type']=$proxy['type'] ?? '';
+        $this->options[CURLOPT_PROXYTYPE]=$this->getProxyType($proxy['type']);
         return $this;
     }
     /** ------------------------------------------------------------------
@@ -349,10 +357,72 @@ class Curl
         if(!$in){
             return mb_convert_encoding($html,$out,array('UTF-8', 'GBK', 'GB2312', 'LATIN1', 'ASCII', 'BIG5', 'ISO-8859-1','cp936'));
         }else{
-            $ret= iconv(  $in,$out.'//IGNORE',$html);
+            $ret= iconv($in,$out.'//IGNORE',$html);
             if($ret===false)
                 return mb_convert_encoding($html,$out,array('UTF-8', 'GBK', 'GB2312', 'LATIN1', 'ASCII', 'BIG5', 'ISO-8859-1','cp936'));
             return $ret;
         }
     }
+
+    /** ------------------------------------------------------------------
+     * getLastInfo
+     * @param string $type
+     * @return array|string
+     *---------------------------------------------------------------------*/
+    public function getLastInfo($type=''){
+        if($type)
+            return $this->info[$type] ?? '在curl的getLastInfo()中无法找到对应的$type';
+        return $this->info;
+    }
+
+    /** ------------------------------------------------------------------
+     * 获取代理类别
+     * @param string $type
+     * @return int
+     *---------------------------------------------------------------------*/
+    protected function getProxyType($type){
+        switch (strtolower($type)){
+            case 'http':
+                return CURLPROXY_HTTP;
+            case 'socks5':
+                return CURLPROXY_SOCKS5;
+            case 'socks4':
+                return CURLPROXY_SOCKS4;
+            case 'socks4a':
+                return CURLPROXY_SOCKS4A;
+            case 'socks5_hostname':
+                return CURLPROXY_SOCKS5_HOSTNAME;
+            default:
+                return CURLPROXY_HTTP;
+        }
+    }
+
+    public function setUserAgent($userAgent=''){
+        if(!$userAgent)
+            $userAgent=$this->getRandomUserAgent();
+        $this->setOptions([CURLOPT_USERAGENT=>$userAgent]);
+        return $this;
+    }
+
+    /** ------------------------------------------------------------------
+     * 获取随机浏览器ua
+     * @return string
+     *---------------------------------------------------------------------*/
+    protected function getRandomUserAgent(){
+        $ua=Conf::all('userAgent');
+        return $ua ? $ua[array_rand($ua)] : '';
+    }
+
+    public function getError(){
+        return $this->errorMsg;
+    }
+
+    /** ------------------------------------------------------------------
+     * 最后一次的响应状态码
+     * @return int
+     *---------------------------------------------------------------------*/
+    public function getHttpCode(){
+        return $this->info['http_code'] ?? 0;
+    }
+
 }

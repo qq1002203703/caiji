@@ -13,15 +13,22 @@
 
 namespace app\weixinqun\ctrl;
 
+use core\Conf;
+
 class IndexCtrl extends \core\Ctrl
 {
+    /*首页数据*/
+    public function index(){
+        $model=app('\app\weixinqun\model\Weixinqun');
+        return ['data_random'=>$model->getRandomItem(10,'<li><a class="w75 grid mb2 mt2 clearfix pr2 pl2" href="{%url%}"><div class="box col-3"><img src="{%qun_qrcode%}"></div><div class="box col-9"><h3 class="f34">{%title%}</h3><p class="f30 color4">{%content%}…</p></div></a></li>')];
+    }
     //微信群
    public function weixinqun($id){
-        $this->details($id,1,'details');
+        $this->details($id,1,'weixinqun/weixinqun');
    }
 
    public function gongzhonghao($id){
-       $this->details($id,3,'gongzhonghao');
+       $this->details($id,3,'weixinqun/gongzhonghao');
    }
 
     /**------------------------------------------------------------------
@@ -33,17 +40,16 @@ class IndexCtrl extends \core\Ctrl
     protected function details($id,$type,$tpl){
         if($id<1)
             show_error('输入不正确的id');
+        $cacheFile=ROOT.'/cache/html/weixinqun/'.get_path_from_id($id).'/'.$id.'.txt';
+        $is_cache=app('config')::get('weixinqun_cache','site');
+        if( $is_cache && $this->read_details_cache($cacheFile)){
+             $this->views_click($id);
+             return ;
+         }
         $model=app('\app\weixinqun\model\Weixinqun');
         $data=$model->getOne('',[['id','eq',$id],['type','eq',$type]]);
         if(!$data)
             show_error('不存在的id');
-        //缓存文件完整路径
-        $cacheFile=ROOT.'/cache/html/weixinqun'.date('/Y/m/d/i/',$data['create_time']).$id.'.html';
-        $is_cache=app('config')::get('weixinqun_cache','site');
-        if( $is_cache && $this->read_details_cache($cacheFile)){
-            $this->views_click($id);
-            return ;
-        }
         $data['city']=$model->getCityName($data['city_id']);
         $data['category']=$model->getCategoryName($data['category_id']);
         $data['tags']=$model->getTagName($data['id']);
@@ -57,9 +63,9 @@ class IndexCtrl extends \core\Ctrl
             'pre_next'=>$model->getPreNext([['type','eq',$type],['id','lt',$id]],[['type','eq',$type],['id','gt',$id]],'id desc',$type),
         ]);
         if($is_cache)
-            $this->display($cacheFile,$tpl);
+            $this->display($cacheFile,$tpl,[],false);
         else
-            $this->_display($tpl);
+            $this->_display($tpl,[],false);
         $this->views_click($id);
     }
     //分类列表页
@@ -75,7 +81,7 @@ class IndexCtrl extends \core\Ctrl
         if(!$cateName)
             show_error('不存在的分类');
         $currentPage=get('page','int',1);
-        $perPage=36;
+        $perPage=10;
         $where1=$where2=[];
         $qs='';
         if($id>0){
@@ -92,10 +98,14 @@ class IndexCtrl extends \core\Ctrl
                 show_error('不存在的地区');
         }
         // is_top desc,recommended desc,create_time
-        $data=$model->seachWeixinqun($where1,(($currentPage-1)*$perPage) .','.$perPage,'create_time desc,id desc');
         $total=$model->count($where2);
-        $url = url('@fenlei@',['id'=>$id]).'?'.$qs.'page=(:num)';
-        $page=new \extend\Paginator($total,$perPage,$currentPage,$url);
+        $data=[];
+        $page='';
+        if($total>0){
+            $data=$model->seachWeixinqun($where1,(($currentPage-1)*$perPage) .','.$perPage,'create_time desc,id desc');
+            $url = url('@weixinqun_list@',['id'=>$id]).'?'.$qs.'page=(:num)';
+            $page=new \extend\Paginator($total,$perPage,$currentPage,$url);
+        }
         $this->_assign([
             'title'=>$cateName.'行业分类'.$cityName,
             'seo_title'=>$cateName.'行业分类'.$cityName.'微信群大全|微信群查找',
@@ -103,57 +113,57 @@ class IndexCtrl extends \core\Ctrl
             'page'=>(string)$page,
             'seo_description'=>'你好这是'.$cateName.'行业分类'.$cityName.'微信群列表，下面列出了所有'.$cateName.'行业分类'.$cityName.'下的群大全，你可以在这里查找你需要的微信群，当然每个群的群主都无比欢迎你加入哦！'
         ]);
-        $this->_display('list');
-    }
-    //地区列表页
-    public function diqu($id){
-        $id=(int) $id;
-        $category_id=get('fenlei','int',0);
-        $model=app('\app\weixinqun\model\Weixinqun');
-        if($id<1){
-            $cityName='全部地区';
-        }else{
-            $cityName=$model->getCityName($id);
-        }
-        if(!$cityName)
-            show_error('不存在的地区');
-        $currentPage=get('page','int',1);
-        $perPage=36;
-        $where1=$where2=[];
-        $qs='';
-        if($id>0){
-            $where1[]=['city_id','=',$id];
-            $where2['where'][]=['city_id','eq',$id];
-        }
-        $cateName='';
-        if($category_id >0){
-            $where1[]=['category_id','=',$id];
-            $where2['where'][]=['category_id','eq',$id];
-            $qs.='fenlei='.$category_id.'&';
-            $cateName=$model->getCategoryName($category_id);
-            if(!$cateName)
-                show_error('不存在的分类');
-            else
-                $cateName='且所属行业为'.$cateName;
-        }
-        // is_top desc,recommended desc,create_time
-        $data=$model->seachWeixinqun($where1,(($currentPage-1)*$perPage) .','.$perPage,'create_time desc,id desc');
-        $total=$model->count($where2);
-        $url = url('@diqu@',['id'=>$id]).'?'.$qs.'page=(:num)';
-        $page=new \extend\Paginator($total,$perPage,$currentPage,$url);
-        $this->_assign([
-            'title'=>$cityName.$cateName,
-            'seo_title'=>$cityName.$cateName.'微信群大全|微信群查找',
-            'data'=>$data,
-            'page'=>(string)$page,
-            'seo_description'=>'你好这是'.$cityName.$cateName.'微信群列表，下面列出了所有'.$cityName.$cateName.'下的群大全，你可以在这里查找你需要的微信群，当然每个群的群主都无比欢迎你加入哦！'
-        ]);
-        $this->_display('list');
+        $this->_display('weixinqun/weixinqun_list',[],false);
     }
 
-    public function tags($name){
-        $name=urldecode($name);
-        echo $name;
+    public function weixinqun_city($id){
+        $this->city($id,1,'weixinqun/weixinqun_city');
+    }
+    public function xuexiao_city($id){
+        $this->city($id,2,'weixinqun/xuexiao_city');
+    }
+    //地区列表页
+    protected function city($id,$type,$tpl){
+        $id=(int) $id;
+        if($id<1)
+            show_error('错误的地区');
+        $cityModel=app('\app\admin\model\City');
+        $data['city']=$cityModel->getById($id);
+        if(!$data['city']){
+            show_error('不存在的地区');
+        }
+        $data['cityChildren']=$cityModel->getChildren($id);
+        $data['cityParent']=$cityModel->getById($data['city']['pid']);
+        switch ($type){
+            case 1://行业群
+                $table='weixinqun';
+                $routerName='@weixinqun_city@';
+                $data['title']=($data['cityParent']?$data['cityParent']['name']:'').$data['city']['name'].'微信群大全';
+                break;
+            case 2://学校群
+                $table='xuexiao';
+                $routerName='@xuexiao_city@';
+                $data['title']=($data['cityParent']?$data['cityParent']['name']:'').$data['city']['name'].'学校微信群大全';
+                break;
+            default:
+                show_error('不存在的群类型');
+        }
+
+        $where=[['city_id','eq',$id]];
+        $total= $cityModel->count([
+            'from'=>$table,
+            'where'=>$where
+        ]);
+        $data['data']=[];
+        $data['page']='';
+        if($total>0){
+            $perPage=10;
+            $currentPage=get('page','int',1);
+            $data['data']=$cityModel->from($table)->_where($where)->limit(($currentPage-1)*$perPage,$perPage)->order('create_time desc,id desc')->findAll(true);
+            $url = url($routerName,['id'=>$id]).'?page=(:num)';
+            $data['page']=new \extend\Paginator($total,$perPage,$currentPage,$url);
+        }
+        $this->_display($tpl,$data,false);
     }
 
     /**--------------------------------------------------
@@ -173,19 +183,15 @@ class IndexCtrl extends \core\Ctrl
      * @return bool
      *---------------------------------------------------------------------*/
     protected function read_details_cache($cacheFile){
-        $config=app('config');
-        if($config::get('weixinqun_cache','site')=='0')
+        if(Conf::get('weixinqun_cache','site')=='0')
             return false;
-        $cacheTime=(int) $config::get('weixinqun_cache_time','site');
+        $cacheTime=(int) Conf::get('weixinqun_cache_time','site');
         // 检测：缓存是否存在并在有效期内
         if(\core\lib\cache\File::checkFile($cacheFile,$cacheTime)==false)
             return false;
         echo file_get_contents($cacheFile);
         return true;
     }
-    public function test(){
-        //dump(app('\app\weixinqun\model\Weixinqun'));
-        //dump(app('\app\weixinqun\model\Weixinqun'));
-    }
+
 
 }

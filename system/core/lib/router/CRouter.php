@@ -5,6 +5,8 @@
  * no need to add so many callback handlers, can save time.
  */
 namespace core\lib\router;
+use core\lib\cache\File;
+
 class CRouter extends \core\Router {
     protected $target = null;
     protected $debug = null;
@@ -51,12 +53,11 @@ class CRouter extends \core\Router {
      */
     public function run($params=array(), $method=null, $path=null){
         if ($this->needCompile()){
-            //$code = "<?php\nreturn new \core\Router("
 			$code = "<?php\nreturn app('router',array("
                 . $this->export($this->_tree, true). ', '
                 . $this->export($this->_events, true). ', '
 				. $this->export(self::$router_name, true). '));';
-            file_put_contents($this->target, $code);
+			File::write($this->target,$code);
         }
         $router = include ($this->target);
         return $router->run($params, $method, $path);

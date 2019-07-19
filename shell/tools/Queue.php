@@ -26,6 +26,8 @@ class Queue extends BaseShell
     protected $outType=2;//1为直接输出，2为重要信息保存为日志，可以传第二个参数'-e'来改变此值
     protected $debug=false;
     protected $runOnce=0;
+    protected $startId=0;
+    protected $maxId=0;
     protected $total=0;
     public function __construct($param=[]){
         if(! $param ){
@@ -33,7 +35,7 @@ class Queue extends BaseShell
             return;
         }
         $this->param = $param;
-        $this->_setCommandOptions(['-e'=>['outType',1],'-d'=>['debug',true],'-o'=>['runOnce',true]],$this->param);
+        $this->_setCommandOptions(['-e'=>['outType',1],'-d'=>['debug',true],'-o'=>['runOnce',true],'-s'=>['startId'],'-m'=>['maxId']],$this->param);
         parent::__construct();
         $this->model=app('\core\Model');
         $this->model->table='caiji_queue';
@@ -59,14 +61,33 @@ class Queue extends BaseShell
             case 'caiji':
                 $this->caiji();
                 break;
+            case 'getlist':
+                $this->getlist();
+                break;
             case 'test':
                 $this->test();
                 break;
+            /*case 'do':
+                $this->do();
+                break;*/
             case 'help':
             default:
-            echo '  1)create queue useg: php cmd tools/queue create'.PHP_EOL;
-            echo '  2)run queue useg: php cmd tools/queue run'.PHP_EOL;
-            echo '      可选参数:   -e:设置输出种类为直接输出'.PHP_EOL;
+                echo '  注：下面说到的name为任务对应的名称，不是一个固定值，是一个变量'.PHP_EOL;
+            echo '  1.可选参数:'.PHP_EOL.
+                    '       -e : 设置输出种类为直接输出'.PHP_EOL.
+                    '       -d : 设置模式为测试模式'.PHP_EOL.
+                    '       -o : 只运行一次'.PHP_EOL.
+                    '       -s n : 设置最小的id,n为数字'.PHP_EOL.
+                    '       -m n : 设置最大的id,n为数字'.PHP_EOL;
+                    echo '      注：下面所有命令都可以使用上面的参数'.PHP_EOL;
+            echo '  2.全部命令列表:'.PHP_EOL;
+            echo '      2.1 采集测试:'.PHP_EOL.
+                '       命令格式: php cmd tools/queue test name page|content|getlist|fabu'.PHP_EOL.
+                '       注：page|content|getlist|fabu为采集种类，必须指定其中一种'.PHP_EOL;
+            echo '      2.2 列表页采集:'.PHP_EOL.
+                            '       2.2.1 全部任务的列表页采集: php cmd tools/queue page'.PHP_EOL.
+                            '       2.2.2 指定任务名的列表页采集: php cmd tools/queue page name'.PHP_EOL;
+            echo '      2.2 run queue useg: php cmd tools/queue run'.PHP_EOL;
         }
         $this->goodbye();
     }
@@ -93,12 +114,10 @@ class Queue extends BaseShell
                     }
                     $this->total++;
                     if($re['del_type']==1){
-                        $this->model->table='caiji_queue';
-                        $this->model->eq('id',$re['id'])->update(['status'=>1]);
+                        $this->model->from('caiji_queue')->eq('id',$re['id'])->update(['status'=>1]);
                     }
                 }else{
-                    $this->model->table='caiji_queue';
-                    $this->model->reset()->eq('id',$re['id'])->delete();
+                    $this->model->from('caiji_queue')->eq('id',$re['id'])->delete();
                     $this->outPut(' The function can not callback : '.$re['callback'].PHP_EOL,true);
                 }
             }
@@ -114,7 +133,6 @@ class Queue extends BaseShell
         $this->model->eq('type',1)->eq('status',1)->delete();
         //把队列任务中种类为每天执行的，恢复为未执行状态,并把执行时间改为当天的时间
         $data=$this->model->eq('type',0)->eq('status',1)->findAll(true);
-        //dump($data);
         if(!$data)
             return 0;
         foreach ($data as $item){
@@ -129,7 +147,12 @@ class Queue extends BaseShell
     }
 
     public function caiji(){
-        $res=$this->model->from('caiji_queue')->eq('status',0)->lt('run_time',time())->limit(100)->findAll(true);
+        if(isset($this->param[1]) && $this->param[1]){
+            $res=$this->model->from('caiji_queue')->eq('class_param',$this->param[1])->eq('status',0)->lt('run_time',time())->limit(100)->findAll(true);
+        }else{
+            $res=$this->model->from('caiji_queue')->eq('status',0)->lt('run_time',time())->limit(100)->findAll(true);
+        }
+        //dump($res);
         if(!$res)
             return 0;
         foreach ($res as  $re){
@@ -160,9 +183,17 @@ class Queue extends BaseShell
     public function page(){
         $this->model->table='caiji_page';
         $time=time()-3600*24;
-        $data=$this->model->_sql('select * from '.$this->prefix.$this->model->table.' where status=1 and (type=0 or update_time< ? ) order by update_time limit 100',[$time],false);
-        if(!$data)
+        //dump($this->param);
+        if(isset($this->param[1]) && $this->param[1]){
+            $data=$this->model->_sql('select * from '.$this->prefix.$this->model->table.' where name=? and status=1 and (type=0 or update_time< ? ) order by update_time limit 100',[$this->param[1],$time],false);
+        }else{
+            $data=$this->model->_sql('select * from '.$this->prefix.$this->model->table.' where status=1 and (type=0 or update_time< ? ) order by update_time limit 100',[$time],false);
+        }
+        if(!$data){
+            $this->outPut(' 队列不存在需要进行的采集任务'.PHP_EOL,false);
             return 0;
+        }
+
         foreach ($data as $item){
             //$rule=$this->model->_sql('select * from '.$this->prefix.'caiji where id=?',[$item['rule_id']],false);
             $caijiRule=$this->getCaijiRules($item['name'],'page',$item['options']);
@@ -179,6 +210,28 @@ class Queue extends BaseShell
                 $this->outPut(' '.$callback.',pageId:'.$item['id'].PHP_EOL,true);
             }
             $this->update('caiji_page',$item['id'],['update_time'=>time()]);
+        }
+        return 0;
+    }
+
+    public function getlist(){
+        //dump($this->param);
+        $name=$this->param[1] ?? '';
+        if(!$name){
+            $this->outPut(' 请输入第二个参数用来指定规则名'.PHP_EOL);
+            return 1;
+        }
+        $caijiRule=$this->getCaijiRules($name,'getlist');
+        if($caijiRule===false){
+            $this->outPut(' 无法获取到规则'.PHP_EOL,true);
+            return 2;
+        }
+        $callback=Helper::callback($caijiRule['callback'].'::create',[$caijiRule]);
+        if(is_object($callback)) {
+            $callback->start();
+        }else{
+            $this->outPut(' '.$callback.PHP_EOL,true);
+            return 3;
         }
         return 0;
     }
@@ -201,17 +254,23 @@ class Queue extends BaseShell
     }
 
     protected function test(){
-        $caijiRule=$this->getCaijiRules('zuanke8.com','content');
+        //需要提供，$name、$type和doTest的参数
+        //dump($this->param);return;
+        if(!isset($this->param[1]) || !isset($this->param[2])){
+            echo  ' 参数不完整,第一个是名称，第二个参数是种类包括 page|content|fabu|getlist'.PHP_EOL;
+            echo  ' 如：php cmd tools/queue test zuanke8 page'.PHP_EOL;
+            return;
+        }
+
+        $name=$this->param[1];
+        $type=$this->param[2];
+        $caijiRule=$this->getCaijiRules($name,$type);
         if(!$caijiRule){
             echo '规则名不正确';
             return;
         }
-        $caiji=\core\caiji\normal\Content::create($caijiRule);
-        if(is_object($caiji)){
-            $caiji->doTest('http://www.zuanke8.com/thread-5297706-1-1.html');
-        }else{
-            dump($caiji);
-        }
+        $method='test_'.$type;
+        $this->$method($caijiRule);
     }
 
     /** ------------------------------------------------------------------
@@ -237,19 +296,62 @@ class Queue extends BaseShell
         $options=Conf::get('options',$name,null,'config/caiji/');
         if($options){
             $caijiRule=array_merge($caijiRule,$options);
+            unset($options);
         }
-        unset($options);
         $caijiRule['name']=$name;
         //$caijiRule['url']=$item['url'];
         $caijiRule['callback'].=ucfirst($type);
         $caijiRule['outType']=$this->outType;
         $caijiRule['runOnce']=$this->runOnce;
         $caijiRule['debug']=$this->debug;
+        $caijiRule['startId']=$this->startId;
+        $caijiRule['maxId']=$this->maxId;
         return $caijiRule;
     }
 
     protected function update($table,$id,$data){
-        $this->model->table=$table;
-        $this->model->eq('id',$id)->update($data);
+        //$this->model->table=$table;
+        $this->model->from($table)->eq('id',$id)->update($data);
     }
+
+    public function test_page($caijiRule){
+        $caijiRule['url']='https://www.laoliboke.com/page_53.html';
+        $caiji='\core\caiji\normal\Page';
+        $caiji=call_user_func($caiji.'::create',$caijiRule);
+        if(is_object($caiji)){
+            $caiji->doTest();
+        }else{
+            dump($caiji);
+        }
+    }
+
+    public function test_content($caijiRule){
+        $caiji='\core\caiji\normal\Content';
+        $caiji=call_user_func($caiji.'::create',$caijiRule);
+        if(is_object($caiji)){
+            $caiji->doTest('https://www.laoliboke.com/post/3.html');
+        }else{
+            //echo 'bbb';
+            dump($caiji);
+        }
+    }
+
+    public function test_fabu($caijiRule){
+        $caiji='\core\caiji\normal\Fabu';
+        $caiji=call_user_func($caiji.'::create',$caijiRule);
+        if(is_object($caiji)){
+            $caiji->doTest('http://www.wezhubo.my/portal/fabu/start?pwd=Djidksl$$EER4ds58cmO',[
+                'from_id'=>12334,
+                'title'=>'标题测试',
+                'content'=>'<p> <img src="http://www.zhuboimg.com/zb_users/upload/043/201809021335201535866520552911/1 (1).jpg"/> </p> <p> <img src="http://www.zhuboimg.com/zb_users/upload/043/201809021335201535866520552911/1 (2).jpg"/> </p> <p> <img src="http://www.zhuboimg.com/zb_users/upload/043/201809021335201535866520552911/1 (3).jpg"/> </p>',
+                'id'=>1,
+                'thumb'=>'http://www.zhuboimg.com/zb_users/upload/043/201809021335201535866520552911/zhutu.jpg',
+                'category'=>'夏娃'
+            ]);
+        }else{
+            dump($caiji);
+        }
+    }
+    //临时测试用
+
 }

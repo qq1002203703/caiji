@@ -1,6 +1,8 @@
 <?php
 namespace core\lib\cache;
 
+use extend\ImageResize;
+
 class File
 {
     /**
@@ -46,7 +48,7 @@ class File
      * @param string $name：缓存文件名
      * @param mixed $data :数据
      * @param int|bool $time 缓存时间，0是永久，false时是现在时间+$this->time，否则是$time+time()
-     * @return bool:写入成功返回true,否则抛出错误“写入权限不足”
+     * @return bool 写入成功返回true,否则抛出错误“写入权限不足”
      *---------------------------------------------------------------------*/
     public function set($name, $data, $time = false)
     {
@@ -102,7 +104,7 @@ class File
      * @param string $cacheFile
      * @param string $content
      * @param bool $add 是否是追加
-     * @return bool：写入成功返回true,写入权限不足时返回false
+     * @return bool 写入成功返回true,写入权限不足时返回false
      *---------------------------------------------------------------------
      */
     static public function write($cacheFile, $content,$add=false)
@@ -123,7 +125,7 @@ class File
      * 检测一个文件是否有效
      * @param string $cacheFile
      * @param int $cacheTime
-     * @return bool：存在且在有效期内返回true,否则返回false
+     * @return bool 存在且在有效期内返回true,否则返回false
      *---------------------------------------------------------------------*/
     static public function checkFile($cacheFile, $cacheTime){
         if (!file_exists($cacheFile)) {
@@ -133,6 +135,70 @@ class File
             return false;
         }
         return true;
+    }
+
+    /** ------------------------------------------------------------------
+     * getFileInfo
+     * @param string $file 文件完整路径
+     * @return array|bool
+     *---------------------------------------------------------------------*/
+    static public function getFileInfo($file){
+        if(!is_file($file))
+            return false;
+        $data=[];
+        $data['mime']=self::getFileMime($file);
+        $data['isimg']=self::checkIsImg($data['mime']) ? 1 :0;
+        $data['ext']=self::getFileExt($file,$data['isimg']);
+        $data['size']=filesize($file);
+        $data['md5']=md5_file($file);
+        if($data['md5']===false)
+            $data['md5']='';
+        $data['savename']=self::getFileNameBody($file);
+        return $data;
+    }
+
+    /** ------------------------------------------------------------------
+     * 获取文件的mime
+     * @param string $file
+     * @return string
+     *--------------------------------------------------------------------*/
+    static public function getFileMime($file){
+        return (new \finfo(FILEINFO_MIME_TYPE))->file($file);
+    }
+
+    /** ------------------------------------------------------------------
+     * 从mime信息判断文件是否是图片
+     * @param string $mime
+     * @return bool
+     *--------------------------------------------------------------------*/
+    static public function checkIsImg($mime){
+        return  strstr($mime, 'image') !== false;
+    }
+
+    /** ------------------------------------------------------------------
+     * 获取文件扩展名
+     * @param string $file 文件完整路径
+     * @param bool $isimg  是否是图片，直接从文件名解析不到扩展名时，图片会继续从mime中获取扩展名
+     * @return string
+     *--------------------------------------------------------------------*/
+    static public function getFileExt($file,$isimg){
+        $r_offset = strrpos($file, '.');
+        $ext=$r_offset ?  substr($file, $r_offset + 1) : '';
+        if($isimg && $ext===''){//图片扩展名为空时继续从mine中获取
+            $ext=ImageResize :: getImagExtendName($file);
+        }
+        return $ext;
+    }
+
+    /** ------------------------------------------------------------------
+     * 从文件路径中提取文件名（不带后缀）
+     * @param string $file
+     * @return string
+     *--------------------------------------------------------------------*/
+    static public function getFileNameBody($file){
+        $name=basename($file);
+        $r_offset = strrpos($name, '.');
+        return  $r_offset ? substr($name, 0,$r_offset) : $name;
     }
 
 }

@@ -96,8 +96,11 @@
 	$user->select('id', 'name')->find();
 
 2、from()
-	设置查找的表
-	$user->select('id', 'name')->from('user')->find();
+	设置表
+	$user->select('id', 'name')->from('user')->find(); //查找时
+	$user->from('post')->eq('id',12)->update(['title'=>'新的标题']); //更新时
+	$user->from('post')->eq('id',12)->delete();  //删除时
+	$user->from('post')->insert(['title'=>'标题']); //插入时
 
 3、join()
 	使用join函数设置连接表查询

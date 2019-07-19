@@ -14,6 +14,7 @@
 
 namespace app\admin\model;
 use core\Model;
+use core\lib\cache\File;
 class Option extends Model
 {
     /**
@@ -23,21 +24,26 @@ class Option extends Model
     /**
      * @var string 主键名
      */
-    public $primaryKey = 'name';
-    protected $auto_incremen=false;
+    public $primaryKey = 'id';
+    public $type='site';
+
+    public function setType($type){
+        $this->type=$type;
+        return $this;
+    }
 
     /**
      * 检查名称在数据库中是否已经存在
      * @param  string $name
-     * @return bool：存在返回false,不存在返回true
+     * @return bool 存在返回false,不存在返回true
      */
     public function checkName($name){
-        return ($this->reset()->eq('name',$name)  ->find()===false)?true:false;
+        return ($this->reset()->eq('name',$name) ->eq('type',$this->type) ->find()===false)?true:false;
     }
 
     public function update_option($data){
         foreach ($data as $k =>$v){
-            $this->reset()->eq('name',$k)->update(['value'=>$v]);
+            $this->reset()->eq('name',$k)->eq('type',$this->type)->update(['value'=>$v]);
         }
         $this->update_cache();
     }
@@ -45,9 +51,11 @@ class Option extends Model
     public function add($data){
         $ret=$this->insert([
             'name'=>$data['name'],
+            'type'=>$data['type'],
             'status'=>$data['status']??1,
             'description'=>$data['description'] ?? '',
-            'value'=>$data['value'] ?? ''
+            'json'=>$data['json'] ?? 0,
+            'value'=>$data['value'] ?? '',
         ]);
         if($ret)
             $this->update_cache();
@@ -58,24 +66,25 @@ class Option extends Model
      * 更新缓存
      *--------------------------------------------------------------------*/
     public function update_cache(){
-        $result=$this->reset()->select('name,value')->eq('status',1)->findAll(true);
+        $result=$this->reset()->select('name,value,json')->eq('type',$this->type)->eq('status',1)->findAll(true);
         $data=[];
-        foreach ($result as $v){
-            switch ($v['name']){
-                case 'counts':
-                case 'city':
-                    $data[$v['name']]=json_decode($v['value'],true);
-                    break;
-                default:
-                    $data[$v['name']]=$v['value'];
-            }
+        foreach ($result as $item){
+            $data[$item['name']]=$item['json'] ? json_decode($item['value'],true) : $item['value'];
         }
+        unset($result);
         $str="<?php \n return ".var_export($data,true).';';
-        \core\lib\cache\File::write(ROOT.DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR.'site.php',$str);
+        File::write(ROOT.DIRECTORY_SEPARATOR.'config'.DIRECTORY_SEPARATOR.$this->type.'.php',$str);
+    }
+
+    public function del($name){
+        $ret=$this->eq('type',$this->type)->eq('name',$name)->delete();
+        if($ret >0)
+            $this->update_cache();
+        return $ret;
     }
 
     public function set_city($id,$type=0){
         $data=['id'=>$id,'typ'=>$type];
-       return $this->eq('name','city')->update( ['value'=>json_encode($data,JSON_UNESCAPED_UNICODE)]);
+       return $this->eq('type',$this->type)->eq('name','city')->update( ['value'=>json_encode($data,JSON_UNESCAPED_UNICODE)]);
     }
 }

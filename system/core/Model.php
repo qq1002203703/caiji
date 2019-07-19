@@ -22,6 +22,7 @@ class Model extends AR
      * @param string $sql：原生sql
      * @param  array $params:要绑定的参数
      * @param bool $table:是否要替换sql语句中的table
+     * @param bool $single 单篇还是多篇
      * @return array|bool
      */
     public function _sql($sql,$params,$table=true,$single=false){
@@ -63,14 +64,33 @@ class Model extends AR
     /**
      * 数据字段过滤，把表中没有的字段从原数据中去掉
      * @param $data：原数据
+     * @param string $table
      * @return array
      */
-    protected function _filterData($data){
-        $fields=$this->getFieldsName();
+    public function _filterData($data,$table=''){
+        $fields=$this->getFieldsName($table);
         $ret=[];
         foreach ($fields as $field){
-            if(isset($data[$field]))
+            if(isset($data[$field])){
                 $ret[$field]=$data[$field];
+            }
+        }
+        return $ret;
+    }
+
+    /** ------------------------------------------------------------------
+     * 数据字段过滤扩展，把表中没有的字段从原数据中去掉，同时把没有输入的项删除
+     * @param array $data
+     * @param string $table
+     * @return array
+     *--------------------------------------------------------------------*/
+    public function _filterDataE($data,$table=''){
+        $fields=$this->getFieldsName($table);
+        $ret=[];
+        foreach ($fields as $field){
+            if(isset($data[$field]) && $data[$field] !==''){
+                $ret[$field]=$data[$field];
+            }
         }
         return $ret;
     }
@@ -78,7 +98,7 @@ class Model extends AR
     /**
      * where条件查询的增强版
      * @param array $where:两种格式： ['id'=>10,'status'=>1] 和 [ ['id','gt',1],['status','eq',1] ]
-     * @return  Model $this
+     * @return static $this
      */
     public function _where($where=array()){
         if(!empty($where)){
@@ -95,11 +115,15 @@ class Model extends AR
 
     /**
      * 添加limit语句的增强版
-     * @param $limit：支持数组和字符串格式，如 '0,10'、'10' 或 [0,10]、[10]
-     * @return $this
+     * @param int|string|array $limit 支持整数、数组和字符串格式，如 100、'0,10'、'10' 或 [0,10]、[10]
+     * @return static $this
      */
     public function _limit($limit){
         if(!$limit) return $this;
+        if(is_int($limit)){
+            $this->limit($limit);
+            return $this;
+        }
         if(is_string($limit))
             $limit=explode(',',$limit);
         if(count($limit)==2){
@@ -113,7 +137,7 @@ class Model extends AR
     /**
      * 一次性绑定多条sql语句
      * @param array $exp：sql表达式，例 ['select'=>'id,title','where'=>[['id','gte',1],'status'=>1],'limit'=>'0,10']
-     * @return $this
+     * @return static $this
      */
     public function _exeExp($exp=array()){
         if(isset($exp['select']))
@@ -122,8 +146,8 @@ class Model extends AR
             $this->from($exp['from']);
         if(isset($exp['where']))
             $this->_where($exp['where']);
-        if(isset($exp['group']))
-            $this->group($exp['group']);
+        if(isset($exp['groupList']))
+            $this->group($exp['groupList']);
         if(isset($exp['order']))
             $this->order($exp['order']);
         if(isset($exp['limit']))
@@ -133,14 +157,37 @@ class Model extends AR
 
     /**
      * 查询总数
+     * @param array $exp : 同$this->_exeExp()
      * @return int
      */
     public function count(array $exp=array()){
         if($exp)
             $this->_exeExp($exp);
         $result=$this->select('count(1) as count')->find(null,true);
-        return $result['count'];
+        return $result ? $result['count'] : 0;
     }
 
-
+    /**------------------------------------------------------------------
+     * 字段值设置
+     * @param string $field 字段名
+     * @param int|string $value
+     * @param array $where
+     * @param string $table 数据库的表名
+     * @param string $operator 运算符 不带运算符会直接设置字段等于值，
+     *          否则设置字段等于（原值与新值经运算符计算后的值）
+     * @return int 返回影响的行数
+     *--------------------------------------------------------------------*/
+    public function setField($field,$value,$where,$table='',$operator='+'){
+        if(!$table)
+            $table=$this->table;
+        $sql=$this->_where($where)->_buildSql(['where']);
+        $param=$this->params;
+        if($operator)
+            $sql='update '.self::$prefix.$table.' set `'.$field.'`=`'.$field.'`'.$operator.'(:ph0)'.$sql;
+        else
+            $sql='update '.self::$prefix.$table.' set `'.$field.'`= :ph0'.$sql;
+        $param[':ph0']=$value;
+        $this->reset(false);
+        return $this->_exec($sql,$param,false);
+    }
 }

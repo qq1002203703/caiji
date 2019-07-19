@@ -71,7 +71,8 @@ class Page extends Base
         //设置最大运行数
         if(isset($this->option['run_max']) && $this->option['run_max'])
             $this->runMax=$this->option['run_max'];
-        $this->curlInit();
+        //$this->curlInit();
+        $this->httpClientInit();
         $this->createTable('content');
         $this->createTable('download');
     }
@@ -98,6 +99,9 @@ class Page extends Base
         return new $class($option);
     }
 
+    /**------------------------------------------------------------------
+     * run
+     *---------------------------------------------------------------------*/
     protected function run(){
 
         switch ($this->option['type']){
@@ -110,25 +114,24 @@ class Page extends Base
                         break 2;
                     }
                     if(strpos($page,'{%')===false){
-                        $this->levelHandler($page,$this->option['rule']);
+                        $this->levelHandler($page,$this->option['rules']);
                     }else{
                         $this->parseUrl($page);
                     }
                 }
                 break;
             case 3://单页循环
-                $html='';
-                $i=0;
                 $page=$this->option['url'];
-                do{//第一个循环
+                //$html=$this->curl->add($page,[],$this->option['curl']['options']);
+                $html=$this->httpClient->http($page,$this->option['http']['method']);
+                if($this->debug)
+                    $this->debug([$html],'第一个页面内容：'.PHP_EOL,false);
+                while ($html){
                     if($this->checkStop()) break;
-                    if($i==0){
-                        $html=$this->curl->add($page,[],$this->option['curl']['options']);
-                        $i=1;
-                    } else{
-                        $html=$this->callback($this->option['plug_single'],[$html,$this->option['rules'][0],$this->option,$this->curl]);
-                    }
-                }while($html);
+                    $html=$this->callback($this->option['plugSingle'],[$page,$html,$this->option['rules'][0],&$this->option,$this->httpClient]);
+                    if($this->debug)
+                        $this->debug([$html],'第二个页面内容：'.PHP_EOL,true);
+                }
                 break;
         }
         if($this->checkStop()){
@@ -139,7 +142,7 @@ class Page extends Base
     /** ------------------------------------------------------------------
      * 获取采集结果
      * @param string $page url
-     * @param object $rule 规则集
+     * @param array $rule 规则集
      * @param bool $multiLevel 是否不是最后一层网址,为true时，不入库且返回值为结果集，为false时，入库且返回值为0
      * @param bool $multiPage 是否是多分页
      * @return int|array:出错时返回非0数字，不出错时有两种情况，$multiLevel=true||$multiPage=true返回结果集（一维数组或二维数组）,否则返回0
@@ -187,7 +190,7 @@ class Page extends Base
 
     /** ------------------------------------------------------------------
      * 多分页自动识别(没指定最大分页数时，只有访问完所有分页才会跳出循环)
-     * @param object $rule 分页规则
+     * @param array $rule 分页规则
      * @param bool $multiLevel 是否是多层
      * @return array|int
      *---------------------------------------------------------------------*/
@@ -279,12 +282,23 @@ class Page extends Base
             }
             if(is_array($v)){
                 //检测重复
-                if($this->model->eq('from_id',$v['from_id'])->find(null,true)){
-                    $this->outPut(' URL is repeat！url:'.$v['url'].PHP_EOL);
-                    $this->countTimes(true,$this->repeatTimeTmp);
+                if($this->model->select('id,isend')->eq('from_id',$v['from_id'])->find(null,true)){
+                    //if($data_tmp['isend']==1){
+                        $this->outPut(' URL is repeat！url:'.$v['url'].PHP_EOL);
+                        $this->countTimes(true,$this->repeatTimeTmp);
+                    //}else{
+                        //$v['isend']=1;
+                        //$this->model->eq('id',$data_tmp['id'])->update($v);
+                        //$this->outPut(' URL is update！url:'.$v['url'].PHP_EOL);
+                    //}
                 }else{
                     $this->countTimes(false,$this->repeatTimeTmp);
                     $v['caiji_name']=$this->option['name'];
+                    //加入额外数据
+                    $this->addSaveValue($v);
+                    if(isset($this->option['plugSave']) && $this->option['plugSave']){
+                        $v=$this->callback($this->option['plugSave'],[$v]);
+                    }
                     if($id=$this->model->insert($v)){
                         //文件
                         if($fileRule){
@@ -313,13 +327,17 @@ class Page extends Base
                     $this->countTimes(true,$this->repeatTimeTmp);
                 }else{
                     $this->countTimes(false,$this->repeatTimeTmp);
-                    if($id=$this->model->insert(['url'=>$v,'caiji_name'=>$this->option['name']])){
+                    $inDataTmp=['url'=>$v,'caiji_name'=>$this->option['name']];
+                    //加入额外数据
+                    $this->addSaveValue($inDataTmp);
+                    if($id=$this->model->insert($inDataTmp)){
                         //单项不会有文件
                         $this->outPut(' Save success！id:'.$id.';url:'.$v.PHP_EOL);
                         $this->total['all']++;
                     }else{
                         $this->outPut(' Save failed！url:'.$v.PHP_EOL);
                     }
+                    unset($inDataTmp);
                 }
             }
         }
@@ -335,11 +353,13 @@ class Page extends Base
      * @return array|null 结果集过滤后，不为空返回过滤后的结果集，否则返回NULL
      *--------------------------------------------------------------------*/
     protected function resultFilter($results,$filter_options,$notEmpty,$pageUrl){
-        if(!$filter_options)
-            return $results;
+        if(!$filter_options && !$notEmpty){
+           return $results;
+        }
+
         $ret=[];
         foreach ($results as $key =>$result){
-            if($this->checkStop()){break;}
+            //if($this->checkStop()){break;}
             if(is_array($result)){
                 foreach ($result as $k =>$v){
                     if(isset($filter_options[$k]) && $filter_options[$k])
@@ -435,38 +455,39 @@ class Page extends Base
     /** ------------------------------------------------------------------
      * 数据采集和过滤
      * @param string $url 要采集的网址
-     * @param object $rule 当前规则
+     * @param array $rule 当前规则
      * @param string $html 把采集网址的原码返回这个变量中
      * @param string $msg 额外信息
      * @return array|int
      *---------------------------------------------------------------------
      */
     protected function caiji($url,$rule,&$html,$msg=''){
-        if(isset($this->option['plugBeforCaiji']) && $this->option['plugBeforCaiji']){
+        if(isset($this->option['plugBeforeCaiji']) && $this->option['plugBeforeCaiji']){
             //插件
-            $html=$this->callback($this->option['plugBeforCaiji'],[$url,$rule,$this->option,&$this->curl]);
+            $html=$this->callback($this->option['plugBeforeCaiji'],[$url,$rule,$this->option,&$this->curl]);
         }else{
-            $html=$this->curl->add($url,[],$this->option['curl']['options']);
+            //$html=$this->curl->add($url,[],$this->option['curl']['options']);
+            $html=$this->http($url);
         }
         if($html===false){
             $this->countTimes(true,$this->errorTimesTmp);
-            $this->outPut(' '.$msg.'Url access failed! url: "'.$url.'" ;msg:'.$this->curl->errorMsg.PHP_EOL,true);
+            $this->outPut(' '.$msg.'Url access failed! url: "'.$url.'" ;msg:'.$this->httpClient->getTipMsg().PHP_EOL,true);
             return 1;
         }
         $this->countTimes(false,$this->errorTimesTmp);
+        //$html=$this->curl->encoding($html);
         //插件
-        if(isset($this->option['plugBeforSelector']) && $this->option['plugBeforSelector']){
-            $html=$this->callback($this->option['plugBeforSelector'],[$html,$rule,$this->option,&$this->curl]);
+        if(isset($this->option['plugBeforeSelector']) && $this->option['plugBeforeSelector']){
+            $html=$this->callback($this->option['plugBeforeSelector'],[$html,$rule,$this->option,$this->httpClient]);
         }
         $rule['cut'] =$rule['cut'] ?? '';
-        $html=$this->curl->encoding($html);
         $result=$this->selector($html,$rule);
         if($result===false){//正则出错
-            $this->error='Selector error!reg :'.$rule['reg'].';msg:'.Selector::getError();
+            $this->error='Selector error! msg:'.Selector::getError();
             $this->isStop=true;
             return 2;
         }elseif(!$result){//正则无法匹配到结果
-            $this->outPut(' '.$msg.'Selector find null!reg :'.$rule['reg'].';msg:'.Selector::getError().PHP_EOL,true);
+            $this->outPut(' '.$msg.'Selector find null!reg :'.$rule['selector'].';msg:'.Selector::getError().PHP_EOL,true);
             return 3;
         }
         $this->debug([$result],$msg.'.....上面为：正则匹配结果'.PHP_EOL,false);
@@ -501,13 +522,37 @@ class Page extends Base
         }
         return $result;
     }
+    /** ------------------------------------------------------------------
+     * http查询：需要curl扩展
+     * @param string $url 要访问的网址
+     * @return int|string
+     *---------------------------------------------------------------------*/
+    public function http($url){
+        $html=$this->httpClient->http($url,$this->option['http']['method']??'get',$this->option['http']['data']??[]);
+        //$this->outPut($this->httpClient->getTipMsg(),false);
+        if($html===false){
+            $this->errorCode[2]='获取目标页面失败！';
+            return 2;
+        }
+        if($html===''){
+            $this->errorCode[4]='获取的目标页面为空！';
+            return 4;
+        }
+        return $html;
+    }
 
+    /** ------------------------------------------------------------------
+     * doTest
+     * @param string $option
+     *---------------------------------------------------------------------*/
     public function doTest($option=''){
         $this->debug=true;
+        //dump($option);
         if($option){
             $this->option=array_merge($this->option,$option);
-            $this->curlInit();
+            $this->httpClientInit();
         }
         $this->run();
     }
+
 }

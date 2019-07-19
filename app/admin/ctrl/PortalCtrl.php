@@ -1,9 +1,7 @@
 <?php
 /**
  * 网站专业定制：网站、微信公众号、小程序等一站式开发
- *
  * QQ 46502166
- *
  * @author: LaoYang
  * @email: 46502166@qq.com
  * @link:  http://dahulu.cc
@@ -12,222 +10,193 @@
  * ======================================*/
 
 namespace app\admin\ctrl;
-use app\portal\model\PortalCategory;
-use app\portal\model\PortalPost;
+use app\common\ctrl\AdminCtrl;
+use core\Conf;
+use extend\Paginator;
 
-class PortalCtrl extends \app\common\ctrl\AdminCtrl
+class PortalCtrl extends AdminCtrl
 {
+    protected $cs=[];//当前app的配置currentSetting
+    protected $pindao=[];//所有频道['article','soft','goods']
+    protected $type='';
+    //初始化
+    protected function _init(){
+        parent::_init();
+        //读取设置
+        $this->cs=Conf::all('portal');
+        $this->pindao=array_keys($this->cs['pindao']);
+        $this->getType();
+        $this->_assign([
+            'type'=>$this->type,
+            'pindao'=>$this->pindao,
+            'cs'=>$this->cs
+        ]);
+    }
+
+    /** ------------------------------------------------------------------
+     * 获取频道种类
+     * @return mixed|string
+     *--------------------------------------------------------------------*/
+    protected function getType(){
+        $type=get('type');
+        if(!$type || !in_array($type,$this->pindao)){
+            $type='article';
+        }
+        $this->type=$type;
+        return $type;
+    }
+
     //分类管理
     public function category(){
-        $model=new PortalCategory();
-        $category=$model->getTreeTable();
+        $model=app('\app\portal\model\PortalCategory');
+        $category=$model->setType('portal_'.$this->type)->getTreeTable();
         $this->_assign([
-            'title'=>'分类管理',
+            'title'=>$this->cs['pindao'][$this->type].'分类管理',
             'category'=>$category
         ]);
         $this->_display();
     }
     //添加分类
-    public function add_category(){
-        $msg='';
-        if($_POST){
-            $valide=new \app\portal\validate\Category();
-            if($valide->check($_POST)){
-                $model=new PortalCategory();
-                if($id=$model->add($_POST)){
-                    $msg='成功添加 “'.$_POST['name'].',分类id:'.$id.'“，你可以继续添加下一个分类';
-                }else{
-                    $msg='添加失败';
-                }
-            }else{
-                $msg=$valide->getError();
-            }
-        }
-        $model=new PortalCategory();
-        $select=$model->getTreeSelect();
+    public function category_add(){
+        $model=app('\app\portal\model\PortalCategory');
+        $model->setType('portal_'.$this->type);
         $this->_assign([
-            'title'=>'添加文章分类',
-            'msg'=>$msg,
-            'select'=>$select
+            'title'=>'添加'.$this->cs['pindao'][$this->type].'分类',
+            'select'=>$model->getTreeSelect(),
         ]);
         $this->_display();
     }
 
-    //删除分类
-    public function delete_category(){
-        $id=get('id');
-        if(!$id) {
-            json(['code'=>1,'msg'=>'id不能为空']);
-            return ;
-        }
-        $model=new PortalCategory();
-        if($model->hasChildren($id)) {
-            json(['code'=>2,'msg'=>'存在子分类不能删除']);
-            return ;
-        }
-        if($model->del($id)){
-            json(['code'=>0,'msg'=>'成功删除']);
-        }else{
-            json(['code'=>3,'msg'=>'删除失败']);
-        }
-    }
+
     //编辑分类
-    public function edit_category(){
+    public function category_edit(){
         $id=get('id','int',0);
         if($id<1) {
-            $this->_redirect('admin/portal/category','分类id不能为空');
+            $this->_redirect('admin/portal/category?type='.$this->type,'分类id不能为空');
         }
-        $msg='';
-        $model=new PortalCategory();
-        if($_POST){
-            $valide=new \app\portal\validate\Category();
-            $_POST['id']=$id;
-            if($valide->check($_POST)){
-                if($model->edit($_POST)){
-                    $msg='成功更新';
-                }else{
-                    $msg='更新失败';
-                }
-            }else{
-                $msg=$valide->getError();
-            }
-            $data=$_POST;
-        }else{
-            $data=$model->getById($id);
+
+        $model=app('\app\portal\model\PortalCategory');
+        $model->setType('portal_'.$this->type);
+        $data=$model->getById($id);
+        if($data['thumb_ids']){//图集
+            $data['thumb_ids']=$model->select('id,uri')->from('file')->in('id',explode(',',$data['thumb_ids']))->findAll(true);
         }
         $select=$model->getTreeNotIn($id);
         $this->_assign([
-            'title'=>'编辑分类',
-            'category'=>$data,
+            'title'=>'编辑'.$this->cs['pindao'][$this->type].'分类',
+            'data'=>$data,
             'select'=>$select,
-            'msg'=>$msg
         ]);
         $this->_display();
     }
 
-    /**
-     * 更新分类缓存
-     */
-    public function update_category_cache(){
-        $cateModel=new PortalCategory();
-        $cateModel->update_cache();
-        json(['code'=>0,'msg'=>'已成功更新分类缓存']);
-    }
-
-    //文章管理
+    //post管理
     public function post(){
         $currentPage =  get('page','int',1);
         $perPage=10;
-        $where=[];
-        $url='';
-        if($category_id=get('category_id','int',0)){
-            $where['r.category_id']=$category_id;
-            $url.='category_id='.$category_id.'&';
+        $status=(int)get('status','int',1);
+        $where[]=['status','eq',$status];
+        $where[]=['type','eq',$this->type];
+        $url='?type='.$this->type.'$status='.$status;
+        $get=[];
+        if($get['category_id']=get('category_id','int',0)){
+            $where[]=['category_id','eq',$get['category_id']];
+            $url.='&category_id='.$get['category_id'];
         }
-        if($keywords=get('keywords','','')){
-            $where['p.keywords']=['title','like','%'.$keywords.'%'];
-            $url.='keywords='.$keywords.'&';
+        if($get['keywords']=get('keywords','','')){
+            $url.='&keywords='.$get['keywords'];
+            $get['keywords']=urldecode($get['keywords']);
+            $where[]=['title','like','%'.$get['keywords'].'%'];
         }
-        $cateModel=new PortalCategory();
-        $model=new PortalPost();
-        //getPost()是三表联合查询，字段前要加表前缀（post表是p,category表是c,relation表是r）
-        $posts=$model->getPost('p.title,p.id,p.create_time,p.status',$where,[($currentPage-1)*$perPage,$perPage]);
-        $total = $model->getPostCout($where);
-        $url = url('admin/portal/post').'?'.$url.'page=(:num)';
-
-        $page=new \extend\Paginator($total,$perPage,$currentPage,$url);
-        $this->_assign([
-            'title'=>'文章管理',
-            'posts'=>$posts,
-            'page'=>(string)$page,
-            'categorys'=>$cateModel->getTree(0,true,['id','name'],'<option value="%id%">%name%</option>','')
+        if($get['is_top']=get('is_top','int',0)){
+            $where[]=['is_top','eq',$get['is_top']];
+            $url.='&is_top='.$get['is_top'];
+        }
+        if($get['recommended']=get('recommended','int',0)){
+            $where[]=['recommended','eq',$get['recommended']];
+            $url.='&recommended='.$get['recommended'];
+        }
+        $cateModel=app('\app\portal\model\PortalCategory');
+        $cateModel->setType('portal_'.$this->type);
+        $model=app('\app\portal\model\PortalPost');
+        $total = $model->count(['where'=>$where]);
+        if($total==0)
+            $posts=[];
+        else
+            $posts=$model->search($where,[($currentPage-1)*$perPage,$perPage],'create_time desc,id');
+        $url = url('admin/portal/post').$url.'&page=(:num)';
+        $page=(string)new Paginator($total,$perPage,$currentPage,$url);
+        $this->_display('',[
+            'title'=>$this->cs['pindao'][$this->type].'管理',
+            'data'=>$posts,
+            'page'=>$page,
+            'total'=>$total,
+            'total_fabu'=>$model->count(['where'=>[['status','eq',1],['type','eq',$this->type]]]),
+            'total_dingshi'=>$model->count(['where'=>['status','eq',3],['type','eq',$this->type]]),
+            'categorys'=>$cateModel->getTree(['id','name'],'<option value="%id%">%name%</option>'),
+            'get'=>$get,
         ]);
-        $this->_display();
     }
 
     /**
-     * 添加文章
+     * 添加post
      */
-    public function add_post(){
-        $msg='';
-        if($_POST){
-            $valide=new \app\portal\validate\Post();
-            if($valide->check($_POST)){
-                $model=new PortalPost();
-                if($id=$model->add($_POST)){
-                    $msg='成功添加文章id:'.$id.'，你可以继续添加下一篇文章';
-                }else{
-                    $msg='添加失败';
-                }
-            }else{
-                $msg=$valide->getError();
-            }
-        }
+    public function post_add(){
         $catModel=app('\app\portal\model\PortalCategory');
-        $category=$catModel->getTree(0,true,['id','name'],'<tr><td><input type="checkbox" value="%id%" name="ids[]" data-name="%name%"></td><td>%id%</td><td>%__repeat_content__%</td></tr>','');
+        $category=$catModel->setType('portal_'.$this->type)->getTreeSelect();
+        if($category==='')//没有分类时
+            $this->_redirect('admin/portal/category?type='.$this->type,'请先添加分类');
         $this->_assign([
-            'title'=>'添加文章',
+            'title'=>'添加'.$this->cs['pindao'][$this->type],
             'category'=>$category,
-            'msg'=>$msg
+            'allow'=>[1=>'完全公开',2=>'金钱购买',3=>'金币购买',4=>'积分达到',5=>'vip会员'],
+            'allowDefaultSelect'=>$this->getAllowDefaultSelect()
         ]);
         $this->_display();
-    }
-
-    /**
-     * 删除文章
-     */
-    public function delete_post(){
-        $id=get('id');
-        if(!$id && preg_match('/^(\d[\d,]*)*\d$/',$id)==0){
-           json(['code'=>1,'msg'=>'id不能为空']);
-           return ;
-       }
-        $id=explode(',',$id);
-        $model=new PortalPost();
-        $ret=$model->reset()->in('id',$id)->delete();
-        if($ret){
-            //删除分类
-            $model->reset()->table='portal_relation';
-            $model->in('post_id',$id)->delete();
-            json(['code'=>0,'msg'=>'成功删除']);
-        }else{
-            json(['code'=>2,'msg'=>'删除失败']);
-        }
     }
 
     /**
      * 编辑文章
      */
-    public function edit_post(){
+    public function post_edit(){
         $id=get('id','int',0);
-        if($id<1) $this->_redirect('admin/portal/post','文章id不能为空');
-        $msg='';
-        $model=new PortalPost();
-        if($_POST){
-            $valide=new \app\portal\validate\Post();
-            $_POST['id']=$id;
-            if($valide->check($_POST)){
-                if($model->edit($_POST)){
-                    $msg='成功更新';
-                }else{
-                    $msg='更新失败';
-                }
-            }else{
-                $msg=$valide->getError();
-            }
+        if($id<1) {
+            $this->_redirect('admin/portal/post',$this->cs['pindao'][$this->type].'id不能为空');
         }
-        $data=$model->getOne('',[['p.id','eq',$id]]);
-        if(!$data) $this->_redirect('admin/portal/post','数据库不存在id为'.$id.'的文章');
+        $model=app('\app\portal\model\PortalPost');
+        $data=$model->getOne($id);
+        if(!$data) $this->_redirect('admin/portal/post','不存在id为'.$id.'的'.$this->pindao[$this->type]);
         $catModel=app('\app\portal\model\PortalCategory');
-        $category=$catModel->getTree(0,true,['id','name'],'<tr><td><input type="checkbox" value="%id%" name="ids[]" data-name="%name%"></td><td>%id%</td><td>%__repeat_content__%</td></tr>','');
+        $category=$catModel->setType('portal_'.$this->type)->getTreeSelect($data['category_id']);
+        unset($catModel);
+        //$tagModel=app('\app\admin\model\Tag');
+        //$tagModel->type='portal_'.$this->type;
         $this->_assign([
-            'title'=>'编辑文章',
+            'title'=>'编辑'.$this->cs['pindao'][$this->type],
             'category'=>$category,
-            'msg'=>$msg,
-            'data'=>$data
+            'data'=>$data,
+            'allow'=>[1=>'完全公开',2=>'金钱购买',3=>'金币购买',4=>'积分达到',5=>'vip会员'],
+            'parent'=>($data['id']>0) ? $model->select('id,title')->eq('id',$data['pid'])->find(null,true) : '',
+            'children'=>$model->eq('pid',$data['id'])->limit(20)->findAll(true),
         ]);
         $this->_display();
     }
 
+    /** ------------------------------------------------------------------
+     * 默认权限选中项
+     * @return int
+     *--------------------------------------------------------------------*/
+    protected function getAllowDefaultSelect(){
+        switch ($this->type){
+            case 'article':
+            case 'soft':
+                return 1;
+            case 'shop':
+            //case 4:
+                return 2;
+            default:
+                return 1;
+        }
+    }
 
 }

@@ -161,7 +161,7 @@ class Save
                     $data['isend']=1;
                     $data['islaji']=1;
                     $data['content']='';
-                }elseif ((time() - $data['create_time']) > 3600*24*30){
+                }elseif ((time() - $data['create_time']) > 3600*24*7){
                     $data['isend']=1;
                     if($data['comments_num'] < 3){
                         $data['islaji']=1;
@@ -181,4 +181,41 @@ class Save
         $model->table='zuanke8';
         $model->eq('id',$id)->update($data);
     }
+
+    public static function hacpai($data){
+        if($data['content']=='' || mb_strlen(strip_tags($data['content'])) <500 ){
+            $data['islaji']=1;
+            $data['content']='';
+        }else{
+            self::checkMaxLength2($data['content']);
+        }
+        $data['isend']=1;
+        $id=$data['id'];
+        unset($data['id']);
+        $model=new \core\Model();
+        $model->table='caiji_hacpai';
+        $model->eq('id',$id)->update($data);
+    }
+
+    //豆瓣 内容采集 入库
+    static public function douban_content($data){
+        $model=app('\core\Model');
+        $id=$data['id'];
+        unset($data['id']);
+        //隐藏的页面，需要登陆才可以看
+        if($data['title']==='页面不存在' || $data['title']==='条目不存在'){
+            $data['is_hide']=1;
+        }else
+            $data['is_hide']=0;
+        //电影还是剧集
+        if($data['type']!=='')
+            $data['type']=1;
+        else
+            $data['type']=0;
+        if(isset($data['content'])){
+            self::checkMaxLength($data['content']);
+        }
+        $model->from('caiji_douban')->eq('id',$id)->update($data);
+    }
+
 }

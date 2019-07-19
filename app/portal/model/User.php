@@ -13,44 +13,95 @@
 
 
 namespace app\portal\model;
-use core\Model;
 
-class User extends Model
+class User extends \app\admin\model\User
 {
     public $table='user';
     public $primaryKey = 'id';
     public $msg='';
 
-    /**
-     * 检查用户名在数据库中是否已经存在
-     * @param $username string
-     * @return bool：存在返回false,不存在返回真
-     */
-    public function checkUsername($username){
-        return ($this->eq('username',$username)  ->find()===false)?true:false;
-    }
-    /**
-     * 检查email在数据库中是否已经存在
-     * @param $email string
-     * @return bool：存在返回false,不存在返回true
-     */
-    public function checkEmail($email){
-        return ($this->eq('email',$email)  ->find()===false) ? true: false;
+    /** ------------------------------------------------------------------
+     * 获取随机用户
+     * @param int $limit
+     * @param string $select
+     * @return array|bool
+     *---------------------------------------------------------------------*/
+    public function getRandomUser($limit,$select='*'){
+        return $this->_sql('SELECT '.$select.' FROM `'.self::$prefix.$this->table.'` WHERE id >= (SELECT floor(RAND() * (SELECT MAX(id) FROM `'.self::$prefix.$this->table.'` where status=1))) and status=1 ORDER BY id LIMIT '.$limit,[],false);
     }
 
-    /**
-     * 添加用户到数据中
-     * @param $data：已经经过验证的数据
-     * @return bool|int:成功添加返回新增的id,失败返回false
-     */
-    public function addUser($data){
-        $this->username=$data['username'];
-        $this->email=$data['email'];
-        $this->password=password_hash($data['password'], PASSWORD_BCRYPT, array("cost" => 9));
-        $this->gid=10;
-        $this->last_login_time=time();
-        $this->create_time=time();
-        $this->avatar=(isset($data['avatar']) && $data['avatar'] !='')?$data['avatar']:'uploads/user/default.png';
-        return $this->insert()===false? false:$this->id;
+    /** ------------------------------------------------------------------
+     * 从用户名添加用户，用户名已经存在时直接返回用户id
+     * @param $username
+     * @return int 用户名已经存在时直接返回用户id，否则会返回新插件的id
+     *--------------------------------------------------------------------*/
+    public function addFromName($username){
+        $id=$this->getIdByName($username);
+        if($id >0)
+            return $id;
+        return $this->addUser([
+            'username'=>$username,
+            'email'=>$username.'@163.com',
+            'avatar'=>'/uploads/user/'.mt_rand(0,500).'.jpg',
+            'password'=>'xue123Zpp456'
+        ]);
+    }
+
+    /** ------------------------------------------------------------------
+     * 检测验证码是否重复提交
+     * @param string $type
+     * @param string $name
+     * @return bool  数据库中存在不过期的，就返回false 否则返回true
+     *--------------------------------------------------------------------*/
+    public function checkVirefyCode($type,$name){
+        $data=$this->from('code')->_where([
+            ['type','eq',$type],
+            ['name','eq',$name],
+            ['expired','lt',time()]
+        ])->find(null,true);
+        if($data){
+            $this->msg='上次发送的验证码还没有过期，请在'.($data['expired']-time()).'秒后才能重新发送';
+            return false;
+        }
+        return true;
+    }
+
+    /** ------------------------------------------------------------------
+     * 检测接收到的验证码是否正确
+     * @param string $name
+     * @param string $code
+     *  @param string $type
+     * @return bool
+     *--------------------------------------------------------------------*/
+    public function checkReceiptCode($name,$code,$type=''){
+        $this->from('code')->eq('name',$name);
+        if($type){
+            $this->eq('type',$type);
+        }
+        $data=$this->find(null,true);
+        if(!$data){
+            return false;
+        }
+        $code=(string)$code;
+        return ($data['content']===$code);
+    }
+
+    //发送验证码
+    public function sendCode($type,$name){
+        if($type==='email'){
+            //发邮件
+            echo '发邮件';
+        }elseif ($type==='phone'){
+            //发短信
+            echo '发短信';
+        }
+        //保存验证码
+    }
+
+    public function search(){
+
+    }
+    public function getOne($id,$select='*'){
+        return $this->select($select)->eq('id',$id)->find(null,true);
     }
 }

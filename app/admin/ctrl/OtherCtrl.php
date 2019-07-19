@@ -11,6 +11,7 @@
 
 namespace app\admin\ctrl;
 use app\common\ctrl\AdminCtrl;
+use extend\Paginator;
 
 class OtherCtrl extends AdminCtrl
 {
@@ -99,4 +100,59 @@ class OtherCtrl extends AdminCtrl
             json(['code'=>2,'msg'=>'删除失败']);
         }
     }
+
+    /** ------------------------------------------------------------------
+     * 锚文本管理
+     *---------------------------------------------------------------------*/
+    public function links(){
+        $currentPage = (int)get('page','int',1);
+        $perPage=20;
+        $url='';
+        $where=[];
+        if(isset($_GET['status'])){
+            $status=(int)$_GET['status'];
+            $url='?status='.$status;
+            $where[]=['status','eq',$status];
+        }
+        $model=app('\app\admin\model\KeywordLink');
+        $total = $model->count(['where'=>$where]);
+        $data=[];
+        if($total>0)
+            $data=$model->_where($where)->order('weight desc,id')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
+        $url = url('admin/portal/post').$url.'&page=(:num)';
+        $this->_display('',[
+            'title'=>'自动锚文本',
+            'data'=>$data,
+            'page'=>(string)new Paginator($total,$perPage,$currentPage,$url),
+            'total'=>$data===false ? [] : $data,
+        ]);
+    }
+
+    /** ------------------------------------------------------------------
+     * 锚文本添加
+     *--------------------------------------------------------------------*/
+    public function links_add(){
+        $this->_display('',[
+            'title'=>'锚文本添加',
+        ]);
+    }
+
+    /** ------------------------------------------------------------------
+     * 锚文本修改
+     *--------------------------------------------------------------------*/
+    public function links_edit(){
+        $id=get('id');
+        if($id<1) {
+            $this->_redirect('admin/other/links','id格式不符');
+        }
+        $model=app('\app\admin\model\KeywordLink');
+        $data=$model->eq('id',$id)->find(null,true);
+        if(!$data)
+            $this->_redirect('admin/other/links','不存在id为'.$id.'的锚文本');
+        $this->_display('',[
+            'title'=>'锚文本添加',
+            'data'=>$model->eq('id',$id)->find(null,true),
+        ]);
+    }
+
 }

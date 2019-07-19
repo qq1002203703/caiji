@@ -9,6 +9,7 @@ namespace PHPSTORM_META {
         'view'				=> \core\View::class,
         'tree'                =>\core\Tree::class,
         'cache'                =>\core\Cache::class,
+        'session'                =>\core\Session::class,
         EXAMPLE_B                      =>ExampleB::class,
     ]));
     override(\app(0),map([
@@ -20,7 +21,8 @@ namespace PHPSTORM_META {
             'view'				=> \core\View::class,
             'tree'                =>\core\Tree::class,
             'cache'                =>\core\Cache::class,
-            EXAMPLE_B                      =>ExampleB::class,
+            'session'                =>\core\Session::class,
+            EXAMPLE_B                      =>static::class,
         ])
     );
 }

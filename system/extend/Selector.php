@@ -13,6 +13,16 @@ namespace extend;
 
 class Selector {
     static protected $error='';
+
+    /** ------------------------------------------------------------------
+     * find
+     * @param string $html
+     * @param string|array $type
+     * @param string $selector
+     * @param string|array $tags
+     * @param string $cut
+     * @return bool|string|array
+     *--------------------------------------------------------------------*/
     public static function find(&$html,$type,$selector,$tags='',$cut=''){
         if(!$type)
             $type=['regex','single'];
@@ -24,7 +34,7 @@ class Selector {
             if(!$ret)
                 self::$error=call_user_func($type[0].'::getError');
             return $ret;
-        } else{
+        }else{
             self::$error='不存在的选择器';
             return false;
         }

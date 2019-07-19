@@ -45,12 +45,12 @@ abstract class BaseShell
     public function goodbye()
     {
         $this->setEndTime();
-        $this->outPut('--------------------总用时 ' . $this->getUseTime() . '----------------------'.PHP_EOL,false);
+        $this->outPut('script end! use time:' . $this->getUseTime() . ' ……'.PHP_EOL,false);
     }
 
 	public function showCommand()
 	{
-	    $this->outPut('Usage : '.PHP_EOL.'  folderName/className [arguments] [options]'.PHP_EOL.PHP_EOL,false);
+	    $this->outPut('Usage : '.PHP_EOL.'  folderName/className [arguments] [options]'.PHP_EOL.PHP_EOL,true);
 	}
 
     /** ------------------------------------------------------------------
@@ -67,10 +67,16 @@ abstract class BaseShell
      *--------------------------------------------------------------------*/
     protected function _setCommandOptions($options,&$argv){
         foreach ($options as $key =>$option){
-            if(isset( $this->{$option[0]})){
+            if(isset($this->{$option[0]})){
                 if(($i=array_search($key,$argv,true)) !==false){
-                    $this->{$option[0]}=$option[1];
-                    unset($argv[$i]);
+                    if(isset($option[1])){
+                        $this->{$option[0]}=$option[1];
+                        unset($argv[$i]);
+                    } else {
+                        $this->{$option[0]} = $argv[$i+1];
+                        unset($argv[$i]);
+                        unset($argv[$i+1]);
+                    }
                 }
             }
         }

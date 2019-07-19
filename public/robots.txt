@@ -1,0 +1,7 @@
+User-agent: AhrefsBot
+Disallow: /
+User-agent: *
+Disallow: /static/
+Disallow: /uploads/
+Disallow: /index/
+Disallow: /portal/

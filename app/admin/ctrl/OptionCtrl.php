@@ -16,48 +16,61 @@ use app\common\ctrl\AdminCtrl;
 
 class OptionCtrl extends AdminCtrl
 {
+    protected $type='site';
+    protected $typeMap=['site'=>'网站','portal'=>'门户','bbs'=>'论坛'];
+    protected $allType;
+
+    protected function _init(){
+        parent::_init();
+        $this->getType();
+    }
+    /** ------------------------------------------------------------------
+     * 获取种类
+     *--------------------------------------------------------------------*/
+    protected function getType(){
+        $this->allType=array_keys($this->typeMap);
+        if(($type=get('type')) && in_array($type,$this->allType)){
+            $this->type=$type;
+        }
+        $this->_assign([
+            'type'=>$this->type,
+            'map'=>$this->typeMap,
+            'allType'=>$this->allType
+        ]);
+    }
     //网站全局设置
     public function all(){
         $model=app('\app\admin\model\Option');
-        if($_POST){
-            $model->update_option($_POST);
-            $this->_redirect('admin/option/all','成功更新');
-        }
-        $data=$model->eq('status',1)->ne('name','city')->findAll(true);
+        $data=$model->eq('type',$this->type)->eq('status',1)->ne('name','city')->findAll(true);
         $this->_assign([
-            'title'=>'全局设置',
+            'title'=>$this->typeMap[$this->type].'全局设置',
             'data'=>$data,
         ]);
         $this->_display();
     }
-    //添加网站全局变量
-    public function add_option(){
-        $msg='';
-        $model=app('\app\admin\model\Option');
-        if($_POST){
-            $valide=app('\app\admin\validate\Option');
-            if($valide->check($_POST)){
-                if($ret=$model->add($_POST)){
-                    $msg='成功添加 “'.$_POST['name'].',“，你可以继续添加下一个变量';
-                }else{
-                    $msg='添加失败';
-                }
-            }else{
-                $msg=$valide->getError();
-            }
-        }
-        $this->_assign([
-            'title'=>'添加网站全局变量',
-            'msg'=>$msg
+
+    //网站全局变量添加
+    public function add(){
+        $this->_display('',[
+            'title'=>$this->typeMap[$this->type].'变量添加',
         ]);
-        $this->_display();
     }
-    //更新全部设置的缓存
-    public function update_cache(){
-        $model=app('\app\admin\model\Option');
-        $model->update_cache();
-        json(['code'=>0,'msg'=>'成功']);
+
+    //修改密码
+    public function pwd(){
+        $this->_display('',[
+            'title'=>'密码修改'
+        ]);
     }
+    //个人信息
+    public function info(){
+        $useModel=app('app\portal\model\User');
+        $this->_display('',[
+            'title'=>'个人信息',
+            'data'=>$useModel->eq('id',$_SESSION['uid'])->find(null,true),
+        ]);
+    }
+
     //区域设置
     public function citys(){
         $msg='';
@@ -113,8 +126,14 @@ class OptionCtrl extends AdminCtrl
         $model->jsonCache($select,$fileName,$type);
         json(['code'=>0,'msg'=>'ok']);
     }
-    //当前设置的区域城市数据
-    public function citys_current(){
 
+    /** ------------------------------------------------------------------
+     * 设置种类
+     * @param string $type
+     * @return static $this
+     *--------------------------------------------------------------------*/
+    public function setType($type){
+        $this->type=$type;
+        return $this;
     }
 }

@@ -43,8 +43,10 @@ class PluginCommon
     public function task001_down($data){
         $image=app('\extend\ImageResize');
         $image->quality_jpg=90;
-        $image->quality_png=90;
+        $image->quality_png=9;
         $file=ROOT.'/'.$data['save_path'];
+        dump($file);
+        dump(is_file($file));
         if($image->checkImage($file)){
             $image->add()->resizeToBestFit(250,250)->save($file);
             echo ' ----img resize success:'.$file.PHP_EOL;
@@ -55,7 +57,7 @@ class PluginCommon
     public function task002_down($data){
         $image=app('\extend\ImageResize');
         $image->quality_jpg=90;
-        $image->quality_png=90;
+        $image->quality_png=9;
         $file=ROOT.'/'.$data['save_path'];
         if($image->checkImage($file)){
             $image->add()->resizeToBestFit(800,800)->save($file);

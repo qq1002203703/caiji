@@ -46,7 +46,7 @@ class Db
 			$dsn = '';
 			$options=$this->options;
 			if (!is_array($options)){
-				throw new \Exception('数据库配置参数出错，无法连接数据库');
+				die('数据库配置参数出错，无法连接数据库');
 			}
 			if (isset($options['port']) &&is_int($options['port'] * 1)){
 				$port = $options['port'];
@@ -96,6 +96,9 @@ class Db
             return $this->pdo;
         else
             return  $this->connect();
+    }
 
+    public function close(){
+        //$this->pdo->
     }
 }

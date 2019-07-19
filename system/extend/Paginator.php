@@ -11,18 +11,31 @@ class Paginator
     protected $maxPagesToShow = 10;
     protected $previousText = '上一页';
     protected $nextText = '下一页';
+    public $format=[
+        'page'=>'pagination',
+        'current'=>'current',
+        'next'=>'next',
+        'disabled'=>'disabled'
+    ];
     /**
      * @param int $totalItems The total number of items.
      * @param int $itemsPerPage The number of items per page.
      * @param int $currentPage The current page number.
      * @param string $urlPattern A URL for each page, with (:num) as a placeholder for the page number. Ex. '/foo/page/(:num)'
+     * @param int $maxPage the max page to out put
+     * @param array $format
      */
-    public function __construct($totalItems, $itemsPerPage, $currentPage, $urlPattern = '')
+    public function __construct($totalItems, $itemsPerPage, $currentPage, $urlPattern = '',$format=[],$maxPage=99)
     {
-        $this->totalItems = $totalItems;
         $this->itemsPerPage = $itemsPerPage;
-        $this->currentPage = $currentPage;
+        //最大页数输出限制
+        $this->currentPage = $currentPage <= $maxPage ? $currentPage : $maxPage;
+        $maxTotal=$itemsPerPage*$maxPage;
+        //最大条数限制
+        $this->totalItems = $totalItems<=$maxTotal ? $totalItems : $maxTotal;
         $this->urlPattern = $urlPattern;
+		if($format)
+			$this->format=$format;
         $this->updateNumPages();
     }
     protected function updateNumPages()
@@ -208,7 +221,7 @@ class Paginator
      *
      * @param int $pageNum
      * @param bool $isCurrent
-     * @return rray
+     * @return array
      */
     protected function createPage($pageNum, $isCurrent = false)
     {
@@ -257,22 +270,22 @@ class Paginator
         if ($this->numPages <= 1) {
             return '';
         }
-        $html = '<div class="pagination">';
+        $html = '<div class="'.$this->format['page'].'">';
         if ($this->getPrevUrl()) {
             $html .= '<a href="' . htmlspecialchars($this->getPrevUrl()) . '">'. $this->previousText .'</a>';
         }
         foreach ($this->getPages() as $page) {
             if ($page['url']) {
                 if($page['isCurrent'] ){
-                    $html .= '<span class="current">' . htmlspecialchars($page['num']) . '</span>';
+                    $html .= '<span class="'.$this->format['current'].'">' . htmlspecialchars($page['num']) . '</span>';
                 }else
                     $html .= '<a href="' . htmlspecialchars($page['url']) . '">' . htmlspecialchars($page['num']) . '</a>';
             } else {
-                $html .= '<span class="disabled">' . htmlspecialchars($page['num']) . '</span>';
+                $html .= '<span class="'.$this->format['disabled'].'">' . htmlspecialchars($page['num']) . '</span>';
             }
         }
         if ($this->getNextUrl()) {
-            $html .= '<a href="' . htmlspecialchars($this->getNextUrl()) . '">'. $this->nextText .'</a>';
+            $html .= '<a class="'.$this->format['next'].'" href="' . htmlspecialchars($this->getNextUrl()) . '">'. $this->nextText .'</a>';
         }
         $html .= '</div>';
 

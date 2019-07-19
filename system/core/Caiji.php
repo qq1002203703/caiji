@@ -19,15 +19,17 @@ abstract  class  Caiji
     /**
      * @var bool 是否是调试模式
      */
-    protected $debug=false;
-    protected $outType=2;
-    protected $runOnce=false;
-    protected $path=ROOT.'/cache/caiji';
+    public $debug=false;
+    public $outType=2;
+    public $runOnce=false;
+    public $path=ROOT.'/cache/caiji';
     protected $fileName;
     protected $option;
     protected $prefix;
     protected $errorTimesTmp=0;
-    protected $errorTimes=10;
+    public $errorTimes=10;
+    public $maxId=0;
+    public $startId=0;
     /**
      * @var \core\Model
      */
@@ -36,25 +38,32 @@ abstract  class  Caiji
         'all'=>0, //本次运行，成功入库的个数
         'down'=>0, //本次运行，需要下载的个数
         'notdown'=>0, //本次运行，成功入库且不用下载的个数
+        'end'=>0,
     ];
     protected $error='';
     //本次任务最大执行次数,0为不限制
-    protected $runMax=0;
+    public $runMax=0;
     //是否停止
     protected $isStop=false;
     protected $stopFile;
 
-    public function __construct($option){
+    protected function __construct($option){
         $this->option=array_merge($this->option,$option);
         $this->_init();
     }
     protected function _init(){
         if(isset($this->option['outType']) && $this->option['outType'])
-            $this->outType=$this->option['outType'];
+            $this->outType=(int)$this->option['outType'];
         if(isset($this->option['debug']) && $this->option['debug'])
-            $this->debug=$this->option['debug'];
+            $this->debug=(bool)$this->option['debug'];
         if(isset($this->option['runOnce']) && $this->option['runOnce'])
-            $this->runOnce=$this->option['runOnce'];
+            $this->runOnce=(bool) $this->option['runOnce'];
+        if(isset($this->option['startId']) && $this->option['startId'])
+            $this->startId=(int) $this->option['startId'];
+        if(isset($this->option['maxId']) && $this->option['maxId'])
+            $this->maxId=(int) $this->option['maxId'];
+        if(isset($this->option['curlTimeInterval']) && $this->option['curlTimeInterval'])
+            $this->curlTimeInterval=(int) $this->option['curlTimeInterval'];
         $this->fileName=$this->option['name'].'_'.basename(str_replace('\\','/',get_class($this)));
         $this->prefix=Conf::get('prefix','database');
 
@@ -74,7 +83,6 @@ abstract  class  Caiji
         if (intval(ini_get("memory_limit")) < 1024) {
             ini_set('memory_limit', '1024M');
         }
-
     }
     /** ------------------------------------------------------------------
      * 使用回调函数
@@ -88,12 +96,15 @@ abstract  class  Caiji
     /** ------------------------------------------------------------------
      * 格式化字符串，用于文件和图片本地化时的路径与文件名的生成
      * @param string $str
-     * @param int $id
+     * @param int|string $id
      * @param string $url
+     * @param int|string $num
+     * @param int $time
      * @return string
      *--------------------------------------------------------------------*/
-    protected function format($str,$id=0,$url=''){
-        $time=time();
+    static public function format($str,$id=0,$num='',$time=-1){
+        if($time<0)
+            $time=time();
         return str_replace([
             '{%Y%}',
             '{%m%}',
@@ -102,8 +113,9 @@ abstract  class  Caiji
             '{%i%}',
             '{%s%}',
             '{%r%}',
-            '{%id%}',
             '{%u%}',
+            '{%id%}',
+            '{%num%}',
         ],[
             date('Y',$time),
             date('m',$time),
@@ -111,9 +123,10 @@ abstract  class  Caiji
             date('H',$time),
             date('i',$time),
             date('s',$time),
-            $this->randomKeys(8),
+            self::randomKeys(8),
+            Helper::uuid(),
             (string)$id,
-            md5($url)
+            (string)$num,
         ],$str);
     }
     /** ------------------------------------------------------------------
@@ -121,7 +134,7 @@ abstract  class  Caiji
      * @param int $length
      * @return string
      *---------------------------------------------------------------------*/
-    protected function randomKeys($length){
+    protected static function randomKeys($length){
         $pattern = '1234567890abcdefghijklmnopqrstuvwxyz';
         $key='';
         for($i=0;$i<$length;$i++) {
@@ -251,18 +264,19 @@ abstract  class  Caiji
                 case 'trueurl'://转换为绝对网址
                     $v[1]=(int)$v[1];
                     $v[2]=(bool)($v[2] ?? false);
+                    $v[3]=$v[3]??$baseurl;
                     if($v[1]==0){
-                        $content=$this->getTrueUrl($content,$baseurl,$v[2]);
+                        $content=$this->getTrueUrl($content,$v[3],$v[2]);
                     }else{
-                        $content=$this->toTrueUrl($content,$baseurl,$v[2]);
+                        $content=$this->toTrueUrl($content,$v[3],$v[2]);
                     }
                     break;
                 case 'trim':
                     $content=trim($content);
                     break;
-                case 'leng':
-                    $leng=mb_strlen($content);
-                    if($leng<(int)$v[1])
+                case 'length':
+                    $length=mb_strlen(strip_tags($content));
+                    if($length<(int)$v[1])
                         $content='';
                     break;
             }
@@ -279,7 +293,9 @@ abstract  class  Caiji
     protected function debug($vars,$msg='',$exit=true){
         if($this->debug){
             foreach ($vars as $var){
+                //echo PHP_EOL;
                 dump($var);
+                //echo PHP_EOL;
             }
             if($exit){
                 exit($msg);
@@ -415,9 +431,20 @@ abstract  class  Caiji
                         `iscaiji` TINYINT(1) NOT NULL DEFAULT \'0\',
                         `isfabu` TINYINT(1) NOT NULL DEFAULT \'0\',
                         `isdownload` TINYINT(1) NOT NULL DEFAULT \'0\',
+                        `isshenhe` TINYINT(1) NOT NULL DEFAULT \'0\',
+                        `islaji` TINYINT(1) NOT NULL DEFAULT \'0\',
+                        `isend` TINYINT(1) NOT NULL DEFAULT \'0\',
                         `isdone` TINYINT(1) UNSIGNED NOT NULL DEFAULT \'0\',
+                        `update_time` INT(11) UNSIGNED NOT NULL DEFAULT \'0\',
+                        `times` SMALLINT(5) UNSIGNED NOT NULL DEFAULT \'0\',
+                        `create_time` INT(11) UNSIGNED NOT NULL DEFAULT \'0\',
                         `url` VARCHAR(500) NOT NULL DEFAULT \'\',
-                        PRIMARY KEY (`id`)
+                        `from_id` VARCHAR(50) NOT NULL DEFAULT \'\',
+                        PRIMARY KEY (`id`),
+                        INDEX `from_id` (`from_id`),
+                        INDEX `caiji_name` (`caiji_name`),
+                        INDEX `iscaiji` (`iscaiji`,`isfabu`,`isdownload`),
+	                    INDEX `isend` (`isend`, `islaji`, `isshenhe`)
                     )COLLATE=\'utf8mb4_general_ci\' ENGINE=InnoDB;';
                     break;
                 case 'Download':
@@ -458,4 +485,5 @@ abstract  class  Caiji
         $rule['cut']=$rule['cut'] ?? '';
         return Selector::find($html,$rule['type'],$rule['selector'],$rule['tags'],$rule['cut']);
     }
+
 }

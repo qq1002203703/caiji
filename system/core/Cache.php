@@ -24,7 +24,7 @@ class Cache
     /** ------------------------------------------------------------------
      * 读取缓存
      * @param string $name
-     * @return mixed：存在而且缓存时间没到期时返回原数据，否则返回false
+     * @return mixed 存在而且缓存时间没到期时返回原数据，否则返回false
      *---------------------------------------------------------------------*/
     public function get($name)
     {
@@ -36,7 +36,7 @@ class Cache
      * @param string $name：缓存名
      * @param mixed $data :数据
      * @param int|bool $time 缓存时间，0是永久，false时是现在时间+默认，否则是$time+time()
-     * @return bool:成功返回true,否则文件缓存时抛出错误“写入权限不足”
+     * @return bool 成功返回true,否则文件缓存时抛出错误“写入权限不足”
      *---------------------------------------------------------------------*/
     public function set($name, $data, $time = false)
     {
@@ -46,7 +46,7 @@ class Cache
     /** ------------------------------------------------------------------
      * 删除缓存
      * @param string $name:缓存名
-     * @return bool:成功删除返回true,否则返回false
+     * @return bool 成功删除返回true,否则返回false
      *---------------------------------------------------------------------*/
     public function del($name)
     {

@@ -15,34 +15,37 @@ class Regex {
     static protected $error='';
     static protected $html;
     /** ------------------------------------------------------------------
-     * 唯一对外公开的方法，在原字符串中，按一定规则找出匹配的内容
-     * @param string $html
+     * 统一接口，在原字符串中，按一定规则找出匹配的内容
+     * 注意
+     * （1）$method为cut时，由于cut方法只是对原字符截取两字符串间的内容，所以此时的$selector不是正则，具体参看cut方法的注释；
+     * （2）多项选择时用multi，还是map？虽然很多时候不同的正则可以匹配相同的内容，但是一条正则的质量对效率的影响是很大的，怎么才能写出高质量的正则，这需要不断摸索；低质量的正则很容易造成灾难性回溯，特别是原内容比较长或正则比较复杂时，所以为了减少回溯，尽量用map方法，map方法先把原内容切成多个小块再在每个小块中对具体标签进行捕获
+     * @param string $html 原内容
      * @param string $method 对应的方法有： single、multi、cut 和 map
-     * @param string $selector
-     * @param array|string $tags
-     * @param string $cut
-     * @return bool|string|array
+     * @param string $selector 具体参看对应方法的注释
+     * @param array|string $tags 同上
+     * @param string $cut 同上
+     * @return bool|string|array 同上
      *--------------------------------------------------------------------*/
     public static function find($html,$method,$selector,$tags, $cut=''){
         self::$html=$html;
-        $method=__CLASS__.'::'.$method;
-        if(is_callable($method)){
-            return call_user_func($method,$selector,$tags,$cut);
-        }else{
-            self::$error='$type不正确';
+        $method=(string)$method;
+        if(!in_array($method,['single','multi','cut','map'],true)){
+            self::$error='$method不正确，只能是single、multi、cut 和 map中的一个';
             return false;
         }
+        return self::$method($selector,$tags,$cut);
     }
+
     /** ------------------------------------------------------------------
      * 正则单项选择器
      * @param string $reg :正则 '#<a href="(?P<url>[^>"]+)" title="(?P<title>[^>"]+)">#is'
      * @param string|array $tags 结果对应到的标签名列表,如 ['url','title'],字符串时多个标签用英文逗号','分隔，如'url,title'
-     * @param string|null $html
-     * @return bool|string|array：正则出错或正则结果选取数少于标签数或者tags为空时，返回false;没有匹配到时,返回空字符串;tags只有一项时，返回对应这项捕获到的字符串，tags有两个及两个以上时返回一维数组（对应各标签捕获的结果集）
+     * @param string|null $html: 原字符串，被map()方法使用时才需要提供此项，find()时此项必须为空
+     * @return bool|string|array 正则出错或正则结果选取数少于标签数或者tags为空时，返回false;没有匹配到时,返回空字符串;tags只有一项时，返回对应这项捕获到的字符串，tags个数大于1时返回一维数组（对应各标签捕获的结果集）
      *--------------------------------------------------------------------*/
-    static protected function single($reg,$tags='url',$html=null){
-        if(($m=@preg_match($reg,($html ? $html: self::$html),$out))=== false) {
-            self::$error = 'the regex("'.$reg.'") syntax errors!';
+    static public function single($reg,$tags='url',$html=null){
+        if(($m=@preg_match($reg,($html ? $html : self::$html),$out))=== false) {
+            self::$error = 'The regex("'.$reg.'") syntax errors!';
             return false;
         }
         if($m===0){
@@ -82,7 +85,7 @@ class Regex {
      * 正则多项选择器
      * @param string $tag_reg 正则 '#<a href="(?P<url>[^>"]+)" title="(?P<title>[^>"]+)">#is'
      * @param string|array $tags：结果对应到的标签名列表，格式：数组时，如['url','title']，字符串时多个标签用英文逗号','分隔，如'url,title'
-     * @param string $tag_cut ：截取时的正则，可以为空，使用时必须用cut作正则捕获名，如/xxxx(?P<cut>[\s\S]+?)yyyy/i
+     * @param string|array $tag_cut ：截取规则，同cut()方法的$rule参数，提供此项会先对原字符串进行一次截取，从而减少原字符串的长度；本项为空时将不进行截取
      * @return bool|string|array 返回的结果情况如下：
      *  正则出错,或正则结果选取数少于标签数，或标签为空时,返回false;
      *  匹配不到时，有两种情况 : 第一种用$reg_cut截取匹配不到时返回空字符串，第二种情况preg_match_all匹配不到时，返回空数组;
@@ -94,6 +97,7 @@ class Regex {
             //$html=self::regexSingle($html,$reg_cut,'cut');
             $content=self::cut($tag_cut);
             if($content===false || $content===''){
+                self::$error='tag_cut 截取规则出错，无法匹配';
                 return $content;
             }
         }else{
@@ -101,7 +105,6 @@ class Regex {
         }
         $res=@preg_match_all($tag_reg, $content, $out);
         unset($content);
-        //dump($res);
         if($res === false) {
             self::$error = 'The multi selector regex "'.$tag_reg.'" syntax errors';
             return false;
@@ -149,25 +152,29 @@ class Regex {
     }
 
     /** ------------------------------------------------------------------
-     * 截取两字符串间的内容
-     * @param string|array $rule 前后两个字符串，支持数组和字符串格式，字符串格式时用'{%|||%}'分隔
-     * @return bool|string
+     * 截取内容：对原字符串进行一次截取
+     * @param string|array $rule 截取规则，包含前后两个字符串，支持数组和字符串格式，字符串格式时用'{%|||%}'分隔两者
+     * @return bool|string 返回原字符串在$rule提供的两个字符串间的字符串
      *--------------------------------------------------------------------*/
     static public function cut($rule){
         if(is_string($rule))
             $rule=explode('{%|||%}',$rule);
-        if(count($rule) !==2){
+        if(!is_array($rule) || count($rule) !==2){
             self::$error='规则格式不正确';
             return false;
         }
-        return Helper::strCut(self::$html,$rule[0],$rule[1]);
+        return Helper::strCut(self::$html,$rule[0],$rule[1],false);
     }
 
     /** ------------------------------------------------------------------
-     * 影射式多项查找：原字符比较长或一次性写正则比较复杂时，推荐用这种方法，因为太复杂的正则很容易出现灾难性回溯
-     * @param string $area:分割子项区域的正则
-     * @param array $map：在区域内每个标签对应的正则
-     * @param string|array $cut：截取规则，可以截取去掉两头没用的内容，减少干扰
+     * 影射式多项查找：原字符比较长或一次性写正则比较复杂时，推荐用这种方法，因为原字符比较长或太复杂的正则很容易出现灾难性回溯
+     * @param string $area:分割子项区域的正则，使用时必须用'erea'作正则捕获名，如/xxxx(?P<area>[\s\S]+?)yyyy/i
+     * @param array $map：在区域内每个标签及其对应的正则，正则的捕获名必须与标签对应 如
+      [
+           'url'=>'#<a href="(?P<url>[^"]+)">#',
+           'title'=>'#<h2>(?P<title>[\s\S]+?)</h2>#'
+      ]
+     * @param string|array $cut：截取规则，同mutil方法的$tag_cut参数
      * @return array|bool|string
      *--------------------------------------------------------------------*/
     static public function map($area,$map,$cut=''){

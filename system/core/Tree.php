@@ -126,8 +126,9 @@ class Tree implements \JsonSerializable
      */
     public function getNodeById($id): Node
     {
-        if (empty($this->nodes[$id])) {
+        if (!isset($this->nodes[$id]) || empty($this->nodes[$id])) {
             throw new \InvalidArgumentException("无效的节点id：{$id}");
+            //die("无效的节点id：{$id}");
         }
         return $this->nodes[$id];
     }

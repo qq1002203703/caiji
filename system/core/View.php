@@ -39,9 +39,8 @@ class View
         'debug'=> DEBUG ,
         'strip_space'=>! DEBUG ,
     ];
-    public function __construct($config=[], Php $engine)
+    public function __construct($config, Php $engine)
     {
-
         if(! empty($config))
             $this->config = array_merge($this->config, (array) $config);
         $this->template = $engine;
@@ -55,12 +54,8 @@ class View
 
     public function fetch($file='',$data=[],$is_auto=true){
         $file=$this->getTplFile($file,$is_auto);
-        if($this->exists($file)){
-            $data=array_merge(self::$var,$this->data,$data);
-            return $this->template->fetch($file, $data);
-        } else{
-            show_error( $this->template->getPath($file).' 是一个不存在的模板文件');
-        }
+        $data=array_merge(self::$var,$this->data,$data);
+        return $this->template->fetch($file, $data);
     }
 
     /**
@@ -136,6 +131,10 @@ class View
                 $str=$router :: $module.  $this->config['separator'] .strtolower($router::$ctrl). $this->config['separator']  . $router :: $action;
         }
        return $str;
+    }
+
+    public function getConfig(){
+        return $this->config;
     }
 
 }

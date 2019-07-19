@@ -8,10 +8,7 @@
  * ======================================
  *
  * ======================================*/
-
-
 namespace core\caiji\normal;
-
 use extend\Selector;
 use extend\Helper;
 class Content extends Base
@@ -66,7 +63,7 @@ class Content extends Base
         //设置最大运行数
         if(isset($this->option['run_max']) && $this->option['run_max'])
             $this->runMax=$this->option['run_max'];
-        $this->curlInit();
+        $this->httpClientInit();
         $this->createTable('content');
         $this->createTable('download');
     }
@@ -92,8 +89,10 @@ class Content extends Base
     }
     public function run()
     {
+        $where1= (isset($this->option['where1']) && $this->option['where1']) ? $this->option['where1'] :  'where iscaiji=0 and isend=0 and caiji_name=\''.$this->option['name'].'\'';
+        $where2=(isset($this->option['where2']) && $this->option['where2']) ? $this->option['where2'] :  [['iscaiji','eq',0],['caiji_name','eq',$this->option['name']],['isend','eq',0]];
         $this->doLoop([
-            'sql'=>'select * from '.$this->prefix.$this->option['table'].' where iscaiji=0 and isend=0 and caiji_name=\''.$this->option['name'].'\'',
+            'sql'=>'select * from '.$this->prefix.$this->option['table'].' '.$where1,
             'params'=>[]
         ],function($v){
             if(!$v['url']){
@@ -103,17 +102,15 @@ class Content extends Base
             }
             //采集
             //$this->downloadData=[];
+            $this->debug([$v['url']],'.....上面为：目标网址',false);
             $tmp=$this->caiji($v);
             if(is_int($tmp)){
-                //删除不能为空却空了的项
-                if($tmp==100){
-                    $this->emptySetTable($v);
-                }
+                $this->saveSpecial($v,$tmp);
                 return $tmp;
             }
             $down=$this->addDownload($v['id']);
             if($down || $this->isHaveDownload){
-                $tmp=$down;
+                //$tmp=$down;
                 $tmp['isdownload']=0;
             } else{
                 $tmp['isdownload']=$this->option['isdownload'] ?? 1;
@@ -136,7 +133,7 @@ class Content extends Base
             return 0;
         },[
             'from'=>$this->option['table'],
-            'where'=>[['iscaiji','eq',0],['caiji_name','eq',$this->option['name'],['isend','eq',0]]],
+            'where'=>$where2,
             'do'=>function($notDoCount){
                 $data=[
                     'method_param'=>'',
@@ -145,24 +142,24 @@ class Content extends Base
                     'run_time'=>time()
                 ];
                 //本次任务有已经采集 而且不用下载的项时，就要添加发布到队列
-                if($this->total['notdown']>0){
-                    $data['callback']='\core\caiji\normal\Fabu@start';
+                /*if($this->total['notdown']>0){
+                    $data['callback']='\core\caiji\normal\Fabu';
                     //固定发布，所有任务一样
-                    $data['class_param']=$this->option['table'].' -n 10';
+                    $data['class_param']=$this->option['name'];
                     $this->addQueue($data,true);
-                }
+                }*/
                 //没有未完成的内容采集，就去除内容采集的队列
                 if($notDoCount<=0){
-                    $data['callback']='\core\caiji\normal\Content@start';
+                    $data['callback']='\core\caiji\normal\Content';
                     $data['class_param']=$this->option['name'];
-                    $this->model->_exec('update `'.$this->prefix.'caiji_queue` set status=1 where status=0 and name_md5=?',[md5($data['callback'].$data['class_param'].$data['method_param'])],false);
+                    //$this->model->_exec('update `'.$this->prefix.'caiji_queue` set status=1 where status=0 and name_md5=?',[md5($data['callback'].$data['class_param'].$data['method_param'])],false);
                 }
                 //本次任务有下载项时，就要添加下载采集到队列
-                if($this->total['down']>0){
-                    $data['callback']='\core\caiji\normal\Download@start';
+                /*if($this->total['down']>0){
+                    $data['callback']='\core\caiji\normal\Download';
                     $data['class_param']=$this->option['name'];
                     $this->addQueue($data,true);
-                }
+                }*/
             }
         ]);
         return 0;
@@ -179,17 +176,13 @@ class Content extends Base
             $v=$this->callback($this->option['pluginBefore'],[$v]);
         //curl 部分
         $html=$this->http($v['url']);
-        if(is_int($html))
+        $this->debug([$html],'远程html源码'.PHP_EOL,false);
+        if(isset($this->option['pluginAfter']) && $this->option['pluginAfter'])
+            $html=$this->callback($this->option['pluginAfter'],[$html]);
+        if(is_int($html)){
             return $html;
-        //file_put_contents(ROOT.'/cache/test.html',$html);
-        //$html=file_get_contents(ROOT.'/cache/test.html');
-        $v=$this->query($html,$v['url'],$v);
-        //dump($this->errorCode);
-        //dump($v);
-        if(! is_int($v)){
-            if(isset($this->option['pluginAfter']) && $this->option['pluginAfter'])
-                $v=$this->callback($this->option['pluginAfter'],[$v]);
         }
+        $v=$this->query($html,$v['url'],$v);
         return $v;
     }
 
@@ -201,71 +194,122 @@ class Content extends Base
             $item['from']=$item['from'] ?? 'html';
             switch ( $item['from']) {
                 case 'html': //常规
-                    if ($item['isMultipage']){ //开启多分页采集
-                        //$pages=Selector::findAll($html,$item['multiPage']['reg'],$item['multiPage']['tags'],$item['multiPage']['cut'],$item['multiPage']['type']);
-                        $pages=$this->selector($html,$item['multiPage']);
-                        if($pages){
-                            //确定第一页
-                            $this->getFirstLink($item['multiPage'],$url,$html);
-                            foreach ($pages as $page){
-                                if(isset($this->pagination[$page['pageUrl']])){
-                                    continue;
-                                }else{
-                                    $this->pagination[$page['pageUrl']]=(int)$page['pageNum'];
-                                }
-                            }
-                            $this->debug([$this->pagination],'-----------------上面为起始分页'.PHP_EOL,false);
-                            $ret[$k]=$this->getMultiResult($item,$k);
-                            if($ret[$k]===''){
-                                if(isset($item['notEmpty']) && $item['notEmpty']){
-                                    $this->errorCode[100]='Selector "'.$k.'" is empty! ';
-                                    return 100;
-                                }
-                            }
-                        }else{
-                            $ret[$k]=$this->getResult($url,$item,$k,$html);
+                    $ret[$k]=$this->queryFromHtml($k,$item,$url,$html);
+                    $this->debug([$ret[$k]],'--------------上面为标签“'.$k.'”未过滤前',false);
+                    if($ret[$k]===''){
+                        if(isset($item['notEmpty']) && $item['notEmpty']){
+                            $this->errorCode[100]='Selector "'.$k.'" is empty! ';
+                            return 100;
                         }
-                    }else{
-                        $ret[$k]=$this->resultQuery($html,$item,$k,$url);
                     }
                     if(is_int($ret[$k])){
                         return $ret[$k];
                     }
-
                     //文件下载
-                    /*if(isset($item['files']['type'])){
+                    if(isset($item['files']['type'])){
                         if($item['files']['type'] == 2){ //文件
-                            $this->downloadData[$k]=$ret[$k];
+                            //$this->downloadData[$k]=$ret[$k];
+                            $ret[$k]=$this->getFileDownload($k,$ret[$k]);
                         }elseif ($item['files']['type'] == 1){ //图片
                             $ret[$k]=$this->getImgDownload($k,$ret[$k]);
                         }
-                    }*/
+                    }
                     break;
-                case 'page':
-                    $data[$k]=$data[$k] ?? '';
-                    $ret[$k]=$data[$k];
-                    if(isset($this->pageOption["rules"]) && ($rule=end($this->pageOption["rules"]))){
-                        if(isset($rule["file"][$k]['type'] ) && ($rule["file"][$k]['type']==1 || $rule["file"][$k]['type'] ==2) ){
-                            $this->isHaveDownload=true;
-                            $this->total['down']++;
+                case 'web'://从另一个网页
+                    $webOption=explode('{%|||%}',$item['getUrl']);
+                    if( isset($webOption[1]) && $webOption[1]){
+                        switch ($webOption[0]){
+                            case 'tags':
+                                foreach ($data as $k1 => $v1){
+                                    $webOption[1]=str_replace('{%'.$k1.'%}',$v1,$webOption[1]);
+                                }
+                                break;
+                            case 'function':
+                                $webOption[1]=$this->callback($webOption[1],[$html,$data,$url]);
+                                break;
+                        }
+                        $html2=$this->http($webOption[1]);
+                        $ret[$k]=$this->queryFromHtml($k,$item,$webOption[1],$html2);
+                        unset($html2);
+                        $this->debug([$ret[$k]],'--------------上面为标签“'.$k.'”未过滤前',false);
+                        if($ret[$k]===''){
+                            if(isset($item['notEmpty']) && $item['notEmpty']){
+                                $this->errorCode[100]='Selector "'.$k.'" is empty! ';
+                                return 100;
+                            }
+                        }
+                        if(is_int($ret[$k])){
+                            return $ret[$k];
+                        }
+                        //文件下载
+                        if(isset($item['files']['type'])){
+                            if($item['files']['type'] == 2){ //文件
+                                //$this->downloadData[$k]=$ret[$k];
+                                $ret[$k]=$this->getFileDownload($k,$ret[$k]);
+                            }elseif ($item['files']['type'] == 1){ //图片
+                                $ret[$k]=$this->getImgDownload($k,$ret[$k]);
+                            }
+                        }
+                    }else{
+                        if(isset($item['notEmpty']) && $item['notEmpty']){
+                            $this->errorCode[109]=' from web getUrl的设置中,第二项不能为空 ';
+                            return 109;
+                        }else{
+                            $ret[$k]='';
                         }
                     }
                     break;
-                case 'url':
+                case 'page'://从page list获取
+                    //$data[$k]=$data[$k] ?? '';
+                    $ret[$k]=$data[$k] ?? '';
+                    //文件下载
+                    if($ret[$k] && isset($item['files']['type'])){
+                        if($item['files']['type'] == 2){ //文件
+                            $ret[$k]=$this->getFileDownload($k,$ret[$k]);
+                        }elseif ($item['files']['type'] == 1){ //图片
+                            $ret[$k]=$this->getImgDownload($k,$ret[$k]);
+                        }
+                    }
                     break;
-                case 'tags':
+                case 'url'://直接从url中获取
                     break;
-                case 'fixed':
-                    $ret[$k]=$item['rule']['remak'];
+                case 'tags'://从已有的标签中合成
                     break;
-                case 'function':
+                case 'fixed'://固定一个值
+                    $ret[$k]=$item['rule']['remark'];
+                    break;
+                case 'function'://从插件函数中获取
                     break;
             }
         }
-        $this->debug([$ret],'......上面为：各标签采集后并经过过滤的结果集',false);
+        $this->debug([$ret],'......上面为：各标签采集后并经过过滤的结果集'.PHP_EOL,false);
         return $ret;
     }
-
+    //quey from html时的函数
+    protected function queryFromHtml($k,$item,$url,$html){
+        if ($item['isMultipage']){ //开启多分页采集
+            //$pages=Selector::findAll($html,$item['multiPage']['reg'],$item['multiPage']['tags'],$item['multiPage']['cut'],$item['multiPage']['type']);
+            $pages=$this->selector($html,$item['multiPage']);
+            if($pages){
+                //确定第一页
+                $this->getFirstLink($item['multiPage'],$url,$html);
+                foreach ($pages as $page){
+                    if(isset($this->pagination[$page['pageUrl']])){
+                        continue;
+                    }else{
+                        $this->pagination[$page['pageUrl']]=(int)$page['pageNum'];
+                    }
+                }
+                $this->debug([$this->pagination],'-----------------上面为起始分页'.PHP_EOL,false);
+                $ret=$this->getMultiResult($item,$k);
+            }else{
+                $ret=$this->getResult($url,$item,$k,$html);
+            }
+        }else{
+            $ret=$this->resultQuery($html,$item,$k,$url);
+        }
+        return $ret;
+    }
     public function save($data){
         $id=$data['id'];
         unset($data['id']);
@@ -281,18 +325,19 @@ class Content extends Base
      * @return int|string
      *---------------------------------------------------------------------*/
     public function http($url){
-        //curl 部分
-        $html=$this->curl->add($url,[],$this->option['curl']['options']);
+        $html=$this->httpClient->http($url,$this->option['http']['method']??'get',$this->option['http']['data']??[]);
+        //$this->outPut($this->httpClient->getTipMsg(),false);
         if($html===false){
-            $this->errorCode[2]='caiji bu dao:message<<<'.$this->curl->errorMsg.'>>>';
+            $this->errorCode[2]='获取目标页面失败！';
             return 2;
         }
         if($html===''){
-            $this->errorCode[4]='caiji bu dao:is empty';
+            $this->errorCode[4]='获取的目标页面为空！';
             return 4;
         }
-        return $this->curl->encoding($html);
+        return $html;
     }
+
 
     /** ------------------------------------------------------------------
      * 获取分页第一条链接
@@ -315,10 +360,10 @@ class Content extends Base
     /** ------------------------------------------------------------------
      * 获取分页链接
      * @param string $html
-     * @param array $multPageRule
+     * @param array $multiPageRule
      *---------------------------------------------------------------------*/
-    protected function getLink(&$html,$multPageRule){
-        $pages=$this->selector($html,$multPageRule);
+    protected function getLink(&$html,$multiPageRule){
+        $pages=$this->selector($html,$multiPageRule);
         if($pages){
             foreach ($pages as $page){
                 if(isset($this->pagination[$page['pageUrl']])){
@@ -365,9 +410,11 @@ class Content extends Base
      * @return int|string
      *--------------------------------------------------------------------*/
     protected function getResult($url,$rule,$tagName,$html=''){
+        //dump($html);
         $html=$html ? :$this->http($url);
         if(is_int($html))
             return $html;
+        //dump($html);
         //获取分页链接
         if(isset($rule['isMultipage']) && $rule['isMultipage']){
             $this->getLink($html,$rule['multiPage']);
@@ -384,6 +431,7 @@ class Content extends Base
      * @return int|string
      *--------------------------------------------------------------------*/
     public function resultQuery(&$html,$item,$tagName,$url){
+        if(isset($this->option['pluginAfter']))
         $ret=$this->selector($html,$item['rule']);
         if($ret===false){
             $this->errorCode[3]= 'selector error:'.Selector::getError();
@@ -507,7 +555,7 @@ class Content extends Base
         $this->downloadData=[];
         //2、合并
         $data_download=$this->downMerge($data_download);
-        //2、不相同项保存到下载表
+        //3、不相同项保存到下载表
         $this->model->table=$this->option['downloadTable'];
         foreach ($data_download['unique'] as $k => $v){
             $num=strrchr($k,':');
@@ -534,7 +582,8 @@ class Content extends Base
                         'replace_path'=>$replace_path,
                         //'save_path'=>trim($this->downloadOption['save_path'],'/').'/'.$replace_path,
                         'type'=>$tag.($num ? ':'.$num : ''),
-                        'cid'=>$id
+                        'cid'=>$id,
+                        //'file_type'=>$this->option['caiji'][$tag]['files']['type'],
                     ]) >0 ){
                     //下载项计数+1
                     $this->total['down']++;
@@ -595,14 +644,16 @@ class Content extends Base
      * @return string
      *--------------------------------------------------------------------*/
     public function getImgDownload($tag,$content){
-        $reg='#<img ([^<>]*?)src=([\'"]?)([^\s<>"\']*)\2([^>]*)>#i';
-        $i=0;
+        if(!$content)
+            return $content;
+        $reg='#<img ([^<>]*?)src=([\'"])([^"\']*)\2([^>]*)>#i';
+        $i=1;
         $content= preg_replace_callback($reg,function($match)use($tag,&$i){
             $ret='';
             if($match[3]){
                 $this->downloadData[$tag.':'.$i]=$match[3];
+                $ret='{%@'.$tag.':'.$i.'@%}';
                 $i++;
-                $ret='{%img'.$tag.':'.$i.'img%}';
             }
             return '<img '.$match[1].'src="'.$ret.'"'.$match[4].'>';
         },$content);
@@ -614,42 +665,72 @@ class Content extends Base
      * @param string $content
      *--------------------------------------------------------------------*/
     public function getFileDownload($tag,$content){
+        if(checkIsEmpty($content))
+            return '';
         $arr=explode('{%|||%}',$content);
-        $num=count($arr);
-        if($num==1){
-            $this->downloadData[$tag]=$content;
-        }else{
-            $i=1;
-            foreach ($arr as $item){
-                $this->downloadData[$tag.':'.$i]=$item;
-                $i++;
-            }
+        $i=1;
+        foreach ($arr as $item){
+            $this->downloadData[$tag.':'.$i]=$item;
+            $content=str_replace($item,'{%@'.$tag.':'.$i.'@%}',$content);
+            $i++;
         }
+        return $content;
     }
     /** ------------------------------------------------------------------
      * 删除某个表中某项
      * @param $id
      *---------------------------------------------------------------------*/
     protected function del($id){
-        $this->model->reset()->eq('id',$id)->delete();
+        $this->model->eq('id',$id)->delete();
         //$this->model->_exec('delete FROM `'.$this->prefix.'tag_relation` WHERE tid = ? and type= ?',[$id,'weixinqun'],false);
     }
 
-    protected function emptySetTable($data){
-        $isend=($data['times'] >1) ? 1 : 0;
-        $this->model->eq('id',$data['id'])->update([
-            'update_time'=>time(),
-            'times'=>($data['times']+1),
-            'iscaiji'=>1,
-            'isend'=>$isend,
-        ]);
+    //特殊保存
+    private function saveSpecial($data,$code){
+        switch ($code){
+            case 100:
+                $isend=($data['times'] >1) ? 1 : 0;
+                $this->errorCode[100]=$this->errorCode[100] ?? '404错误！';
+                $update=[
+                    'update_time'=>time(),
+                    'times'=>($data['times']+1),
+                    'iscaiji'=>1,
+                    'isend'=>$isend,
+                ];
+                break;
+            case 101://ip被封
+                $this->errorCode[101]=$this->errorCode[101] ?? 'ip被封';
+                $update=[
+                    'update_time'=>time(),
+                    'times'=>($data['times']+1),
+                    'iscaiji'=>1,
+                    'isend'=>0,
+                ];
+                break;
+            case 102:
+                $this->errorCode[102]=$this->errorCode[102] ?? '获取不到结果';
+                $update=[
+                    'update_time'=>time(),
+                    'times'=>0,
+                    'iscaiji'=>1,
+                    'isend'=>1,
+                    'is_hide'=>1,
+                ];
+                break;
+            default:
+                return;
+        }
+        $this->model->eq('id',$data['id'])->update($update);
     }
+
     /** ------------------------------------------------------------------
      * 测试
      * @param string $url
      *--------------------------------------------------------------------*/
-    public function doTest($url){
-        $this->caiji(['url'=>$url]);
+    public function doTest($data){
+        $this->debug=true;
+        $this->caiji($data);
+        //dump($aa);
     }
 
     /** ------------------------------------------------------------------
@@ -664,4 +745,5 @@ class Content extends Base
         }
         dump($ret);
     }
+
 }

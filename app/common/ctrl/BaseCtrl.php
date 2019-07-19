@@ -8,17 +8,17 @@
  * @email: 46502166@qq.com
  * @link:  http://dahulu.cc
 ========================================================================================
- * 前台需要登陆访问的控制器，它继承了\system\Ctrl，并且被前台需要登陆访问的所有控制器继承
+ * 前台需要登陆访问的控制器，它继承了\core\Ctrl，并且被前台需要登陆访问的所有控制器继承
  * ========================================================================================*/
 namespace app\common\ctrl;
-
-class BaseCtrl extends \core\Ctrl
+use core\Ctrl;
+class BaseCtrl extends Ctrl
 {
 	protected function _init(){
         //1.必须登陆
        $this->_must_login();
         //提交用户
-        $this->assign([
+        $this->_assign([
             'username'=>$_SESSION['username'],
         ]);
     }
@@ -29,8 +29,8 @@ class BaseCtrl extends \core\Ctrl
         if($this->_is_login()){
             return true;
         }
-        $this->logout();
-        $this->_redirect('index/login','你还没登陆，或登陆超时');
+        $this->_logout();
+        $this->_redirect('portal/index/login','你还没有登陆，请先登陆');
         exit();
     }
 

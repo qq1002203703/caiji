@@ -28,7 +28,9 @@ class Ctrl
 		//向模板提交必要的变量
         $this->_assign(app('config')::all('site'));
         $this->_assign([
-            'is_login'=>$this->_is_login(),
+            'isLogin'=>$this->_is_login(),
+            'isAdmin'=>$this->_checkIsAdmin(),
+			'host'=>$this->_getHost(),
             'router'=>[
                 'module'=>Router::$module,
                 'ctrl'=>Router::$ctrl,
@@ -38,32 +40,57 @@ class Ctrl
     }
 
     protected function _config(){
-        //设置前台模板路径
-        $template=app('config')::get('template','config');
-        if($template['open_mobile_tpl'])
-            $this->_mobile_detect(true);
-        if(isset($_SESSION['is_mobile']) && $_SESSION['is_mobile']){
+        //获取配置
+        $template=Conf::get('template','config');
+        $siteConfig=Conf::all('site');
+        //自动检测是否移动客户端
+        $is_mobile_domain=($siteConfig['mobile_domain']===$_SERVER['HTTP_HOST']);
+        if($siteConfig['is_detect_mobile']){
+            unset($_SESSION['is_mobile']);
+            $is_mobile=isset($_SESSION['is_mobile']) ? $_SESSION['is_mobile'] : $this->_mobile_detect(true);
+            if($is_mobile && (!$is_mobile_domain)){
+                header('Location: '.$_SERVER['REQUEST_SCHEME'].'://'.$siteConfig['mobile_domain'].($_SERVER['SERVER_NAME']==80 ? '' : ':'.$_SERVER['SERVER_PORT'] ).$_SERVER['REQUEST_URI']);
+                exit();
+            }elseif(!$is_mobile && $is_mobile_domain){
+                header('Location: '.$siteConfig['site_url'].($_SERVER['SERVER_NAME']=='80' ? '' : ':'.$_SERVER['SERVER_PORT'] ).$_SERVER['REQUEST_URI']);
+                exit();
+            }
+        }
+        //根据域名不同对应不同的模板
+        if($is_mobile_domain){
             $this->view->config([
-                'path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['mobile_path'],'/'). DIRECTORY_SEPARATOR. app('config')::get('template_mobile','site'). DIRECTORY_SEPARATOR ,
+                'path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['mobile_path'],'/'). DIRECTORY_SEPARATOR. $siteConfig['template_mobile']. DIRECTORY_SEPARATOR ,
                 'cache_path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['cache_path_mobile'],'/'). DIRECTORY_SEPARATOR,
             ] );
         }else{
             $this->view->config([
-                'path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['view_path'],'/'). DIRECTORY_SEPARATOR. app('config')::get('template','site'). DIRECTORY_SEPARATOR ,
+                'path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['view_path'],'/'). DIRECTORY_SEPARATOR. $siteConfig['template']. DIRECTORY_SEPARATOR ,
                 'cache_path' => ROOT .  DIRECTORY_SEPARATOR .trim($template['cache_path'],'/').  DIRECTORY_SEPARATOR ,
             ] );
         }
     }
 
     public function __call($name, $arguments){
-        show_error('类"'.__CLASS__.'"中不存在"'.$name.'()"方法');
+        if(DEBUG){
+            header('HTTP/1.1 404 Not Found');
+            header("status: 404 Not Found");
+            header('Content-Type:text/html;charset=utf-8');
+            die('不存在的方法');
+        }
+        $this->show404();
+    }
+    protected function show404(){
+        header('HTTP/1.1 404 Not Found');
+        header("status: 404 Not Found");
+        $this->_display('common/404',[],false);
+        exit();
     }
     /**
      * 跳转
-     * @param $url string:跳转目标地址
-     * @param $msg string：显示信息
-     * @param $code int：展示样式，1为绿色，2为红色，其他数字蓝色，默认为1绿色,
-     * @param $wait int:等待多少秒后才跳转，默认3秒
+     * @param string $url 跳转目标地址
+     * @param string $msg 显示信息
+     * @param int $code 展示样式，1为绿色，2为红色，其他数字蓝色，默认为1绿色,
+     * @param int $wait 等待多少秒后才跳转，默认3秒
      */
     protected function _redirect($url,$msg,$code=1,$wait=3)
     {
@@ -83,7 +110,7 @@ class Ctrl
     /**
      * 模板变量赋值
      * @access protected
-     * @param  mixed $name  要显示的模板变量
+     * @param  string|array $name  要显示的模板变量
      * @param  mixed $value 变量的值
      * @return $this
      */
@@ -174,6 +201,68 @@ class Ctrl
             }
         }
         return $is_mobile;
+    }
 
+
+    /** ------------------------------------------------------------------
+     * 检测当前用户是否是管理员
+     * @return bool
+     *--------------------------------------------------------------------*/
+    protected function _checkIsAdmin(){
+        $gid=Session::get('user.gid',false);
+        return ($gid && $gid <10);
+    }
+
+    /** ------------------------------------------------------------------
+     * 读取详情页缓存内容
+     * @param string $cacheFile 缓存文件完整路径
+     * @param int $cacheTime 每次缓存的时间（单位秒）
+     * @return bool
+     *---------------------------------------------------------------------*/
+    protected function _readCache($cacheFile,$cacheTime){
+        // 检测：缓存是否存在并在有效期内
+        if(\core\lib\cache\File::checkFile($cacheFile,$cacheTime)==false)
+            return false;
+        echo file_get_contents($cacheFile);
+        return true;
+    }
+
+    /** ------------------------------------------------------------------
+     * 对从$_GET或$_POST中获取的值进行的前处理
+     * @param array $data  每一项的前三条是必须的，'f'表示过滤规则，'d'表示获取不到时的默认值，'w'表示where条件，'fi'表示对应的字段名（此条可以不提供，不提供时默认同键名相同）
+     * 格式 :
+     *   [
+     *      'isend'=>['f'=>'int','d'=>0,'w'=>'eq'],
+     *      'name'=>['f'=>'','d'=>'','w'=>'eq','fi'=>'caiji_name']
+     *  ]
+     * @param string $method 'get'或'post'
+     * @return array 返回三项（用list()函数可以方便地捕获结果），
+     *      第一项:array,是where,
+     *      第二项: array,是get/post的变量和值的对应
+     *      第三项:string,是第二项经http_build_query转换后的值
+     *---------------------------------------------------------------------*/
+    protected function _getQuery($data,$method='get'){
+        $where=[];
+        $map=[];
+        foreach ($data as $k =>$item){
+            $current=$method($k,$item['f'],$item['d']);
+            if($item['w']){
+                $where[]=[ $item['fi'] ?? $k,$item['w'],$current];
+            }
+            $map[$k]=$current;
+        }
+        return [$where,$map,http_build_query($map)];
+    }
+    /**------------------------------------------------------------------
+     * 获取当前主机的域名和子域名
+     * @return array
+     *---------------------------------------------------------------------*/
+    protected function _getHost(){
+        $arr=explode('.',$_SERVER['SERVER_NAME']);
+        $ret=[];
+        $ret['domain']=array_pop($arr);
+        $ret['domain']=array_pop($arr).'.'.$ret['domain'];
+        $ret['sub']= implode('.',$arr);
+        return $ret;
     }
 }

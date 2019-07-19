@@ -7,12 +7,19 @@
   "license": "MIT",
   "require": {
     "php": ">=7.0",
+    "ext-json":"*",
+    "ext-pdo":"*",
+    "ext-curl":"*",
+    "ext-pdo_mysql": "*",
+    "ext-fileinfo":"*",
+    "ext-gd":">=2.0",
     "filp/whoops": "2.1.2",
     "monolog/monolog": "~1.0",
     "kphcdr/crypt": "^1.0",
     "overtrue/wechat": "~4.0",
     "facebook/webdriver": "^1.6",
-    "xparse/element-finder": "^0.3.1"
+    "xparse/element-finder": "^0.3.1",
+    "sinacms/multihttp": "^2.0"
   },
   "autoload": {
     "files": ["system/helper.php","system/init.php"],
@@ -33,7 +40,7 @@
   "repositories": [
     {
       "type": "composer",
-      "url": "https://packagist.phpcomposer.com"
+      "url": "https://packagist.laravel-china.org"
     },
     {
       "packagist": false

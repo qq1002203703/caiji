@@ -1,0 +1,18 @@
+.layui-collapse{border:none;}
+.layui-colla-item{border: 1px solid #e2e2e2;margin-bottom: 20px;}
+.layui-colla-item:first-child{border-top: 1px solid #e2e2e2;}
+.layui-colla-content{padding: 20px;}
+.layui-collapse .layui-form-item .layui-input-inline{width: 100%;}
+.layui-collapse .layui-form-item .layui-input-inline{margin-right: 0;}
+.layui-collapse .layui-form-item{margin-bottom: 0;}
+.image-upload{height: 150px;width: 200px;}
+.layui-collapse .layui-form-select .layui-input{margin-bottom: 10px;}
+.layui-input, .layui-textarea{margin-bottom: 10px;}
+.layui-layer-max,.layui-layer-min { display:none!important; }
+#pic_tab .layui-tab-title li{display: block; text-align:left; }
+#pic_tab .layui-tab-title{float: left;width: 200px;}
+#pic_tab .layui-tab-content{float: left;width: 500px;}
+/*聚合*/
+#juhe-parent-container{display: inline-block;margin-left: 10px;border: 0px solid red;vertical-align: middle;}
+.juhe-cancel{display: inline-block;border: 0px solid #c0c0c0;color: #ff0000;cursor:pointer;margin: 4px 0 0 6px;padding: 2px;}
+.juhe-title{font-weight: normal;margin-top: 10px;background: #E6E6E6;font-size: 16px;padding: 4px}

@@ -11,6 +11,8 @@
  * 常用函数助手类：大多是一些字符串和数组的
  * =========================================*/
 namespace extend;
+use core\Conf;
+
 class Helper
 {
     /**
@@ -67,13 +69,16 @@ class Helper
      * @param  string $needle:要匹配的字符串
      * @param string $replace:匹配后要替换成的字符串
      * @param string $haystack：原字符串
+     * @param bool $isDo 是否发生替换
      * @return string
      */
-    static public function str_replace_once($needle, $replace, $haystack) {
+    static public function str_replace_once($needle, $replace, $haystack,&$isDo=false) {
         $pos = strpos($haystack, $needle);
+        $isDo=false;
         if ($pos === false) {
             return $haystack;
         }
+        $isDo=true;
         return substr_replace($haystack, $replace, $pos, strlen($needle));
     }
 
@@ -84,12 +89,12 @@ class Helper
      * @return string
      */
     static public function replace_outlink($text,$mylink){
-        $myhost=parse_url($mylink,PHP_URL_HOST);
-        if($myhost=='')
-            $myhost= $_SERVER['HTTP_HOST'];
-        $myhost=explode('.',$myhost);
-        $num=count($myhost);
-        $reg='/<a ([^<>]*?)href=["\']?(https?:\/\/(?!([a-z0-9]+\.)*?'.$myhost[$num-2].'\.'.$myhost[$num-1].').*?)[\'"]?(\s[^<>]*?)*?>/i';
+        $myHost=parse_url($mylink,PHP_URL_HOST);
+        if($myHost=='')
+            $myHost= $_SERVER['HTTP_HOST'];
+        $myHost=explode('.',$myHost);
+        $num=count($myHost);
+        $reg='/<a ([^<>]*?)href=["\']?(https?:\/\/(?!([a-z0-9]+\.)*?'.$myHost[$num-2].'\.'.$myHost[$num-1].').*?)[\'"]?(\s[^<>]*?)*?>/i';
         return preg_replace_callback($reg,function($match) use($mylink){
             //dump($match);
             return '<a '.'href="'.$mylink.'?url='.urlencode($match[2]).'" target="_bank">';
@@ -123,15 +128,14 @@ class Helper
      * curl访问网址
      * @param $url：网址
      * @param array $option
-     * @param bool $stauts:引用传值，请求是否成功
+     * @param bool $status:引用传值，请求是否成功
      * @param array $post：post数据(不填则为GET)
      * @param array $cookie：
      *          string $cookie['file']:cookie存放文件,
      *          bool $cookie['save']:是否每次访问后都自动更新cookie
-     * @return string：正确返回请求网址的回应内容，失败返回错误信息
+     * @return string 正确返回请求网址的回应内容，失败返回错误信息
      *--------------------------------------------------------------------*/
-   static public function curl_request($url,&$stauts,$option=array(),$post=array(),$cookie=array()){
-        $curl = curl_init();
+   static public function curl_request($url,&$status,$option=array(),$post=array(),$cookie=array()){
         $default_option=[
             //目标网址
             CURLOPT_URL => $url,
@@ -161,23 +165,30 @@ class Helper
             if(isset($cookie['save']) && $cookie['save'])
                 $default_option[ CURLOPT_COOKIEJAR]=$cookie['file'];
         }
-        curl_setopt_array($curl,$option+$default_option);
+       if(substr($url,0,5)=='https'){
+           $default_option[CURLOPT_SSL_VERIFYPEER]=false;
+           $default_option[CURLOPT_SSL_VERIFYHOST]=0;
+       }
+       $curl = curl_init();
+        curl_setopt_array($curl,($option+$default_option));
         $data = curl_exec($curl);
         $msg=curl_error($curl);
+        //$info = curl_getinfo($curl);
         curl_close($curl);
         //如果获取失败
         if ($data===false) {
-            $stauts=false;
+            $status=false;
+            //dump($info);
             return $msg;
         }
-       $stauts=true;
+       $status=true;
         return $data;
     }
 
     /** ------------------------------------------------------------------
      * 数组删除重复项，并找出重复项被最后合并到哪里了，暂时用于下载文件的去重复
-     * @param $var：关联数组，必须是关联数组
-     * @return array：包含两部分，array ['unique']: 去除重复后的数组，array ['change']:键名是重复的删除项，键值对应的是最后留下的键名
+     * @param array $var 关联数组，必须是关联数组
+     * @return array 包含两部分，array ['unique']: 去除重复后的数组，array ['change']:键名是重复的删除项，键值对应的是最后留下的键名
      *---------------------------------------------------------------------
      */
     static public function  array_delet_repeat($var){
@@ -240,22 +251,21 @@ class Helper
      *      静态方法时，字符串方式用'类名::静态方法名',数组方式用['类名','方法名']
      * @param array $params 函数/方法的参数,用法同call_user_func_array的第二个参数
      * @param mixed $class_params 实例化类时类的构造函数的参数（$class_params为可变数量参数，不限个数）
-     * @return mixed：成功回调时，返回回调函数的值，回调失败或回调出错时，返回false。
+     * @return mixed 成功回调时，返回回调函数的值，回调失败或回调出错时，返回false。
      *  注意： 为了知道回调是否成功，那么回调函数的返回值就不要返回false，返回除false外一切值就可以了
      *---------------------------------------------------------------------*/
     static public function callback($func,$params, ...$class_params){
         $callable=$func;
         $is_obj=false;
-        if(is_string($func)){
-            if(strpos($func,'@')>0){
-                $callable=explode('@',$func);
-                $is_obj=true;
-            }
+        if(is_string($func) && strpos($func,'@')>0){
+            $callable=explode('@',$func);
+            $is_obj=true;
         }
         if(is_callable($callable)){
             //try{
                 if($is_obj){
-                    return call_user_func_array([new $callable[0](...$class_params),$callable[1]],$params);
+                    $class=new $callable[0](...$class_params);
+                    return call_user_func_array([$class,$callable[1]],$params);
                 }else{
                     return call_user_func_array($callable,$params);
                 }
@@ -267,4 +277,190 @@ class Helper
         return false;
     }
 
+    /** ------------------------------------------------------------------
+     * 对内容中的图片标签自动添加alt属性
+     * @param string $content
+     * @param string $alt
+     * @return string
+     *--------------------------------------------------------------------*/
+    static public function addImgAlt($content,$alt){
+        $i=0;
+        return preg_replace_callback('/<img [^<>]*>/i',function($match)use($alt,&$i){
+            if($i>0)
+                $alt.='_'.$i;
+            //存在alt属性
+            if(@preg_match('/ alt=([\'"]?)([^\'">\s]*)\1/i',$match[0],$m) >0){
+                //alt属性为空时
+                if($m[2]===''){
+                    $i++;
+                    return str_replace($m[0],' alt="'.$alt.'"',$match[0]);
+                }
+                //alt属性不为空，直接返回
+                return $match[0];
+            }
+            //不存在alt属性,直接在img后添加alt
+            $i++;
+            return str_replace('<img ','<img alt="'.$alt.'" ',$match[0]);
+        },$content);
+    }
+
+    /**
+     * 生成16位以上唯一ID
+     * @author Aspirant Zhang <admin@aspirantzhang.com>
+     * @param int $length 不含前缀的长度，最小14，建议16+
+     * @param string $prefix 前缀
+     * @return string $id
+     */
+    public static function uuid($length = 16,$prefix = ''){
+        $id = $prefix;
+        $addLength = $length - 13;
+        $id .= uniqid();
+        if (function_exists('random_bytes')) {
+            $id .= substr(bin2hex(random_bytes(ceil(($addLength) / 2))),0,$addLength);
+        } elseif (function_exists('openssl_random_pseudo_bytes')) {
+            $id .= substr(bin2hex(openssl_random_pseudo_bytes(ceil($addLength / 2))),0,$addLength);
+        } else {
+            $id .= mt_rand(1*pow(10,($addLength)),9*pow(10,($addLength)));
+        }
+        return $id;
+    }
+
+    /** ------------------------------------------------------------------
+     * 把字符串中的关键词替换为锚文本，且只替换一次，如果关键词在原字符中已经存在锚文本，不会再替换
+     * 由于原内容经常会出现过长的情况，如果还用复杂的正则，会很容易造成正则的灾难性回溯，为了防止这点，
+     * 本函数尽量多作切片少用正则，用也是用简单的正则，实践中暂未出现灾难性回溯
+     * @param string $content 原字符串，注意这是引用传值
+     * @param string $keyword 关键词
+     * @param string $link 关键词所在的链接
+     * @param string $currentUrl 当前链接
+     * @return bool 发生了替换就返回true,否则返回false
+     *---------------------------------------------------------------------*/
+    public static function keywordLink(&$content,$keyword,$link,$currentUrl=''){
+        //当前页面url跟关键词链接相同不作替换
+        if($currentUrl && $currentUrl==$link)
+            return false;
+        //没有关键词跳过
+        if(strpos($content,$keyword)===false)
+            return false;
+        $safeKeyword=preg_quote($keyword,'#');
+        //已经有内链跳过
+        if(@preg_match('#<a[^>]*>'.$safeKeyword.'</a>#i',$content) >0)
+            return false;
+        //标签过滤
+        $i=-1;
+        $ignore_match=[];
+        $content=preg_replace_callback([
+            '#<pre[^>]*>.*?</pre>#is', //pre标签
+            '#<a[^>]*>.*?</a>#is', //a标签
+            '#<[^<>]+>#'  //html标签内部
+        ],function ($mat)use (&$i,&$ignore_replace,&$ignore_match){
+            $i++;
+            $ignore_replace[$i]=$mat[0];
+            $ignore_match[$i]='{%ignore_place_'.$i.'%}';
+            return $ignore_match[$i];
+        },$content);
+        //正式开始替换
+        $url ='<a href="'.$link.'">'.$keyword.'</a>';
+        $content=self::str_replace_once($keyword,$url,$content,$isDo);
+        //恢复过滤的标签
+        if($i>-1){
+            $content=str_replace($ignore_match,$ignore_replace,$content);
+        }
+        return $isDo;
+    }
+
+    /**
+     * js escape php 实现
+     * @param string $string  the string want to be escaped
+     * @param string $in_encoding
+     * @param string $out_encoding
+     */
+    static public function escape($string, $in_encoding = 'UTF-8',$out_encoding = 'UCS-2') {
+        $return = '';
+        if (function_exists('mb_get_info')) {
+            for($x = 0; $x < mb_strlen ( $string, $in_encoding ); $x ++) {
+                $str = mb_substr ( $string, $x, 1, $in_encoding );
+                if (strlen ( $str ) > 1) { // 多字节字符
+                    $return .= '%u' . strtoupper ( bin2hex ( mb_convert_encoding ( $str, $out_encoding, $in_encoding ) ) );
+                } else {
+                    $return .= '%' . strtoupper ( bin2hex ( $str ) );
+                }
+            }
+        }
+        return $return;
+    }
+
+    /** ------------------------------------------------------------------
+     * unescape
+     * @param string $str
+     * @return string
+     *---------------------------------------------------------------------*/
+    static public function unescape($str){
+        $ret = '';
+        $len = strlen($str);
+        for ($i = 0; $i < $len; $i ++)
+        {
+            if ($str[$i] == '%' && $str[$i + 1] == 'u')
+            {
+                $val = hexdec(substr($str, $i + 2, 4));
+                if ($val < 0x7f)
+                    $ret .= chr($val);
+                else
+                    if ($val < 0x800)
+                        $ret .= chr(0xc0 | ($val >> 6)) .
+                            chr(0x80 | ($val & 0x3f));
+                    else
+                        $ret .= chr(0xe0 | ($val >> 12)) .
+                            chr(0x80 | (($val >> 6) & 0x3f)) .
+                            chr(0x80 | ($val & 0x3f));
+                $i += 5;
+            } else
+                if ($str[$i] == '%')
+                {
+                    $ret .= urldecode(substr($str, $i, 3));
+                    $i += 2;
+                } else
+                    $ret .= $str[$i];
+        }
+        return $ret;
+    }
+
+    /** ------------------------------------------------------------------
+     * PHP简单加密
+     * @param string $string 原字符串
+     * @param string $key 加密钥匙
+     * @return string
+     *---------------------------------------------------------------------*/
+    public static function encode($string, $key=''){
+        $strArr   = str_split(base64_encode($string));
+        $strCount = count($strArr);
+        if(checkIsEmpty($key))
+            $key=Conf::get('coke_key','config');
+        foreach (str_split($key) as $k=> $value)
+            $k < $strCount && $strArr[$k] .= $value;
+        return str_replace(array('=', '+', '/'), array('O0O0O', 'o000o', 'oo00o'), join('', $strArr));
+    }
+    /** ------------------------------------------------------------------
+     * 对PHP简单加密后的字符串进行解密
+     * @param string $string 经过加密的字符串
+     * @param string $key 加密钥匙
+     * @return string
+     *---------------------------------------------------------------------*/
+    public static function decode($string, $key=''){
+        $strArr   = str_split(str_replace(array('O0O0O', 'o000o', 'oo00o'), array('=', '+', '/'), $string), 2);
+        $strCount = count($strArr);
+        if(checkIsEmpty($key))
+            $key=Conf::get('code_key','config');
+        foreach (str_split($key) as $k => $value)
+            $k <= $strCount && isset($strArr[$k]) && $strArr[$k][1] === $value && $strArr[$k] = $strArr[$k][0];
+        return base64_decode(join('', $strArr));
+    }
+    //网址加密
+    public static function urldecode($url){
+        return self::decode(urldecode($url));
+    }
+    //网址解密
+    public static function urlencode($url){
+        return urlencode(self::encode($url));
+    }
 }

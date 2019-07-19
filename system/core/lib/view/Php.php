@@ -74,7 +74,7 @@ class Php
      * 模板引擎配置项
      * @access public
      * @param  array|string $config
-     * @return void|array|string
+     * @return array|string|null
      */
     public function config($config){
         if(!empty($config)){
@@ -84,6 +84,7 @@ class Php
                 return $this->config[$config];
             }
         }
+        return null;
     }
     /**
      * 魔术函数,设置模板参数
@@ -141,6 +142,12 @@ class Php
      */
     public function fetch($template, $data = [])
     {
+        //加载模板的函数
+        $functionFile=$this->config['path'].'common/function.php';
+        if(is_file($functionFile)){
+            include_once $functionFile;
+        }
+        unset($functionFile);
         if ($data && is_array($data)) {
             $this->data = array_merge($this->data,$data);
         }
@@ -234,8 +241,7 @@ class Php
         $this->includeFile[$template] = filemtime($template);
         $layout=file_get_contents($template);
         $content=str_ireplace('{%content%}',$content,$layout);
-        $content=$this->parseContentRe($content);
-        return $content;
+        return $this->parseContentRe($content);
     }
 
     /**
@@ -286,7 +292,7 @@ class Php
         return preg_replace($this->regex['block'],'',$content);
     }
 
-    /**解析模板中的 {%include@name%}标签
+    /**递归解析模板中的 {%include@name%}标签
      * @param $content string
      * @return string
      */
@@ -297,14 +303,13 @@ class Php
         }
         //$matches=array_combine($matches[1],$matches[0]);
         $replace=[];
-
         foreach ($matches[1] as $v){
             $template=$this->getPath($v);
             $this->includeFile[$template] = filemtime($template);
             $replace[]=file_get_contents($template);
         }
         //exit();
-        return str_replace($matches[0],$replace,$content);
+        return $this->parseInclude(str_replace($matches[0],$replace,$content));
     }
     /**
      * 检查模板编译缓存是否有效
@@ -421,8 +426,8 @@ class Php
             1=>'模板缓存文件写入失败，有可能是写入权限不足',
             2=>'模板文件不存在',
         ];
-        echo ($this->config['debug'] ? $error[$code].' : '.$replenish : $error[$code]);
-        die();
+        header('Content-Type:text/html;charset=utf-8');
+        die ($this->config['debug'] ? $error[$code].' : '.$replenish : $error[$code]);
     }
 
 }
