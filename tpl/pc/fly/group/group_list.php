@@ -3,8 +3,8 @@
 <title><?=($category['seo_title']?:$category['name']);?>_小组_<?=$site_name?></title>
 <meta name="keywords" content="<?=$category['seo_keywords']?>">
 <meta name="description" content="<?=$category['seo_description']?>">
-<meta name="mobile-agent" content="format=html5;url=<?=url('@goods_list@',['slug'=>$category['slug']],'http://'.$mobile_domain)?>">
-<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@goods_list@',['slug'=>$category['slug']],'http://'.$mobile_domain)?>">
+<meta name="mobile-agent" content="format=html5;url=<?=url('@group_list@',['slug'=>$category['slug']],'http://'.$mobile_domain)?>">
+<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@group_list@',['slug'=>$category['slug']],'http://'.$mobile_domain)?>">
 {%end%}
 {%block@article%}
 <div class="layui-container">
@@ -13,6 +13,7 @@
             <div class="fly-panel">
                 <div class="layui-breadcrumb p20" lay-separator="&gt;">
                     <a href="/">首页</a>
+                    <a href="/group/all">全部小组</a>
                     <?=$bread?>
                     <a href="#">列表</a>
                 </div>
@@ -32,7 +33,7 @@
                                 <p>相关小组</p>
                                 <p>
                                     <?php if($randoms): foreach ($randoms as $item):?>
-                                        <span><a href="<?=url('@goods_list@',['slug'=>$item['slug']])?>"><?=$item['name']?></a></span>
+                                        <span><a href="<?=url('@group_list@',['slug'=>$item['slug']])?>"><?=$item['name']?></a></span>
                                     <?php endforeach;endif;?>
                                 </p>
                             </div>
@@ -48,7 +49,7 @@
                                         <img src="<?=($item['avatar']? ($tuku.$item['avatar']) :$tuku.'/uploads/user/default.png')?>" alt="<?=$item['username']?>">
                                     </a>
                                     <div class="fly-list-title">
-                                        <a href="<?=url('@goods@',['id'=>$item['id']])?>"><?=$item['title']?></a>
+                                        <a href="<?=url('@group@',['id'=>$item['id']])?>"><?=$item['title']?></a>
                                     </div>
                                     <div class="fly-list-info">
                                         <a href="javascript:;"><cite><?=$item['username']?></cite></a>
@@ -70,7 +71,7 @@
                 <div class="fly-panel-title">相关推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@goods@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
                     </div>
                 </div>
             </div>
@@ -79,7 +80,7 @@
                 <div class="fly-panel-title">其他推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@goods@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
                     </div>
                 </div>
             </div>

@@ -29,11 +29,14 @@ class PostCtrl extends Ctrl
     public function goods($id){
         $this->allTypePost($id,'goods','portal/goods');
     }
+    public function group($id){
+        $this->allTypePost($id,'group','group/group_details');
+    }
 
     /** ------------------------------------------------------------------
      * 所有文章类型内容页输出
      * @param int $id
-     * @param int $type  1=>文章,2=>软件,3=>商品
+     * @param int $type  article,goods,soft,group
      * @param $tpl
      *--------------------------------------------------------------------*/
     protected function allTypePost($id,$type,$tpl){
@@ -41,15 +44,13 @@ class PostCtrl extends Ctrl
             show_error('输入不正确的id');
         $model=app('\app\portal\model\PortalPost');
         $data=$model->getOne($id);
-        if(!$data || ((int)$data['type']) !== ((int)$type))
+        if(!$data || ($data['type']) !== $type)
             show_error('不存在的id');
         //$data['content']=Helper::replace_outlink($data['content'],url('portal/index/outlink'));
         if(isset($data['more']) && $data['more'])
             $data['more']=json_decode($data['more'],true);
         if(isset($data['files'])&&$data['files'])
             $data['files']=json_decode($data['files'],true);
-        if($data['category_pid']==Conf::get('group_category_id','portal',0))
-            $tpl='group/group_details';
         $comments=[];
         //$currentPage=get('page','int',1);
         $perPage=Conf::get('bbs','site')['comment_perpage'];
@@ -70,7 +71,7 @@ class PostCtrl extends Ctrl
             'title'=>$data['title'],
             'data'=>$data,
             'allow'=>$this->checkPostPermissions($data),
-            'tags'=>app('\app\admin\model\Tag')->getNameList($id,'portal_'.$data['type']),
+            'tags'=>app('\app\admin\model\Tag')->getNameList($id,'portal_'.$type),
             'comments'=>$comments,
             'isMore'=>(count($comments) > $perPage),
             'page'=>'',
@@ -110,6 +111,10 @@ class PostCtrl extends Ctrl
     public function goods_list($slug){
         $this->getCategoryList($slug,'goods','portal/goods_list');
     }
+
+    public function group_list($slug){
+        $this->getCategoryList($slug,'group','group/group_list');
+    }
     /** ------------------------------------------------------------------
      * 分类列表
      * @param string $slug 分类的slug
@@ -121,12 +126,8 @@ class PostCtrl extends Ctrl
         $category=$catModel->eq('slug',$slug)->eq('type','portal_'.$type)->find(null,true);
         if(!$category) show_error('不存在的分类slug:'.$slug);
         $catModel->setType($category['type']);
-        $groupCateId=Conf::get('group_category_id','portal',false)?:'1';
-        if($category['id']==$groupCateId){
-            $this->group($category,$catModel);
-            return;
-        }elseif ($category['pid']==$groupCateId){
-            $tpl='group/group_list';
+        //$groupCateId=Conf::get('group_category_id','portal',false)?:'1';
+        if ($type=='group'){
             //'where pid='.$category['pid'] .' and id<>'.$category['id']
             $randoms=$catModel->randomItem(10,['pid'=>$category['pid'],['id','ne',$category['id']]],'id,slug,name');
             $perPage=30;
@@ -140,6 +141,7 @@ class PostCtrl extends Ctrl
 
         $where=[['type','eq',$type],['status','eq',1],['category_id','eq',$category['id']]];
         $total = $postModel->count(['where'=>$where]);
+        dump($postModel->getSql());
         if($total>0)
             $data=$postModel->search($where,[($currentPage-1)*$perPage,$perPage],'create_time desc,id desc');
         else
@@ -156,72 +158,58 @@ class PostCtrl extends Ctrl
         ],false);
     }
 
-    /** ------------------------------------------------------------------
-     * 小组
-     * @param array $currentCategory
-     * @param \app\portal\model\PortalCategory $cateModel
-     *---------------------------------------------------------------------*/
-    protected function group($currentCategory,$cateModel){
+    /**--------------------------------------------------
+     * 余部分类
+     *---------------------------------------------------*/
+    public function article_all(){
+        $this->getCategoryAll('article','portal/article_all');
+    }
+    public function goods_all(){
+        $this->getCategoryAll('goods','portal/goods_all');
+    }
+    public function group_all(){
+        $this->getCategoryAll('group','group/group_all');
+    }
+    protected function getCategoryAll($type,$tpl){
         $currentPage=get('page','int',1);
         $perPage=20;
-        $where=[['pid','eq',$currentCategory['id']],['status','eq',1]];
+        $where=[['type','eq','portal_'.$type],['status','eq',1]];
         $data=[];
+        $cateModel=app('\app\portal\model\PortalCategory');
         $data['total'] = $cateModel->count(['where'=>$where]);
         if($data['total'] >0){
-            $data['data']=$cateModel->eq('pid',$currentCategory['id'])->order('id')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
-            $url = url('@goods_list@',['slug'=>$currentCategory['slug']]).'?page=(:num)';
+            $data['data']=$cateModel->_where($where)->order('id')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
+            $url = url('@'.$type.'_list@').'?page=(:num)';
             $data['page']=(string)new Paginator($data['total'],$perPage,$currentPage,$url);
         }else{
             $data['page']='';
             $data['data']=[];
         }
-        $data['title']=$currentCategory['name'];
-        $data['category']=$currentCategory;
-        $data['bread']=$cateModel->bread($currentCategory['id'],'goods_list');
-        unset($currentCategory);
-        $this->_display('group/group_all',$data,false);
+        $this->_display($tpl,$data,false);
     }
+
     /** ------------------------------------------------------------------
-     * 全部分类
-     * @param string $slug 分类的slug
-     * @param string $type 种类
-     * @param string $tpl 模板名称
+     * 权限控制
+     * @param array $data
+     * @return array
      *---------------------------------------------------------------------*/
-    protected function category_all($slug,$type,$tpl){
-        $catModel=app('\app\portal\model\PortalCategory');
-        if(strcasecmp($slug,'all')!==0){
-            $category=$catModel->eq('slug',$slug)->eq('type','portal_'.$type)->find(null,true);
-            if(!$category) show_error('不存在的分类slug:'.$slug);
-        }else{
-            $category=['name'=>'全部','slug'=>'all','id'=>0,'thumb'=>'','pid'=>0,'type'=>'portal_'.$type];
-        }
-        $catModel->setType($category['type']);
-        $data=$catModel->eq('pid',$category['pid'])->eq('type',$category['type'])->findAll(true);
-        $this->_display($tpl,[
-            'title'=>$category['name'],
-            'category'=>$category,
-            'data'=>$data,
-        ],false);
-    }
-
-    public function getZhubo($slug='all'){
-        $this->category_all($slug,'goods','zhubo_list');
-    }
-
     protected function checkPostPermissions(&$data){
         if($this->_checkIsAdmin())
             return ['show'=>true,'download'=>true];
-        $type=(int)$data['type'];
         $ret=[];
-        switch ($type){
-            case 1: //文章
+        switch ($data['type']){
+            case 'article': //文章
                 $ret['show']=$this->checkPostPermissions2($data);
                 $ret['download']=true;
                 break;
-            case 2://软件
-            case 3://虚拟商品,
+            case 'soft'://软件
+            case 'goods'://虚拟商品,
                 $ret['show']=true;
                 $ret['download']=$this->checkPostPermissions2($data);
+                break;
+            case 'group':
+                $ret['show']=true;
+                $ret['download']=true;
                 break;
             default:
                 $ret['show']=false;

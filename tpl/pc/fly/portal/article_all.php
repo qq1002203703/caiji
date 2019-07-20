@@ -1,10 +1,10 @@
 {%extend@common/base_portal%}
 {%block@title%}
-<title>全部小组_<?=$site_name?></title>
-<meta name="keywords" content="全部小组">
-<meta name="description" content="<?=$site_name?>下全部小组">
-<meta name="mobile-agent" content="format=html5;url=<?=url('@group_all@','','http://'.$mobile_domain)?>">
-<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@group_all@','','http://'.$mobile_domain)?>">
+<title>全部文章分类_<?=$site_name?></title>
+<meta name="keywords" content="文章分类">
+<meta name="description" content="<?=$site_name?>下全部文章分类展示">
+<meta name="mobile-agent" content="format=html5;url=<?=url('@article_all@','','http://'.$mobile_domain)?>">
+<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@article_all@','','http://'.$mobile_domain)?>">
 {%end%}
 {%block@article%}
 <div class="layui-container">
@@ -13,15 +13,15 @@
             <div class="fly-panel">
                 <div class="layui-breadcrumb p20" lay-separator="&gt;">
                     <a href="/">首页</a>
-                    <?=$bread?>
-                    <a href="#">小组大全</a>
+
+                    <a href="#">列表</a>
                 </div>
                 <?php if($data):?>
                     <ul class="list-movie pl20">
-                        <h1 class="title"><?=$title?></h1>
+                        <h1 class="title">全部文章分类</h1>
                         <?php foreach ($data as $item):?>
                             <li class="item mr15" style="width: 170px;margin-bottom: 18px;">
-                                <a class="link" href="<?=url('@group_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
+                                <a class="link" href="<?=url('@article_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
                                     <div class="layui-row">
                                         <div class="layui-col-md4">
                                             <div class="pic" style="height: 58px">
@@ -49,7 +49,7 @@
                 <div class="fly-panel-title">相关推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@article@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
                     </div>
                 </div>
             </div>
@@ -58,7 +58,7 @@
                 <div class="fly-panel-title">其他推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@article@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
                     </div>
                 </div>
             </div>

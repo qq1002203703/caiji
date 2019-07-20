@@ -58,7 +58,7 @@ class Portal extends BaseCommon
             $data=[
                 'title'=>mb_substr(strip_tags($item['content']),0,18),
                 'content'=>$item['content'],
-                'type'=>'goods',
+                'type'=>'group',
             ];
             $data['category_id']=mt_rand(3,574);
             $data['uid']=$this->getUserId($item['username']);
@@ -72,7 +72,7 @@ class Portal extends BaseCommon
             if($id=$this->model->from('portal_post')->insert($data)){
                 $this->outPut(' 成功添加到portal_post表'.PHP_EOL);
                 $this->addComment($item['comment'],$id,'portal_post');
-                $this->addTag($id,$item['tag'],'portal_goods',0);
+                $this->addTag($id,$item['tag'],'portal_group',0);
                 $this->update($item['id'],['isfabu'=>1],$table);
                 $this->updateCateNum($data['category_id'],'portal_post');
             }
@@ -99,7 +99,7 @@ class Portal extends BaseCommon
            $this->outPut('开始处理：id=>'.$item['id'].',-------------'.PHP_EOL);
            $data=[
                'title'=>$item['title'],
-               'type'=>'goods',
+               'type'=>'group',
            ];
            $data['category_id']=mt_rand(2,16);
            $item['username']='';
@@ -113,7 +113,7 @@ class Portal extends BaseCommon
            if($id=$this->model->from('portal_post')->insert($data)){
                $this->outPut(' 成功添加到portal_post表'.PHP_EOL);
                $this->addComment2($item['comment'],$id,$data['create_time'],'portal_post');
-               //$this->addTag($id,$item['tag'],'portal_goods',0);
+               //$this->addTag($id,$item['tag'],'portal_group',0);
                $this->update($item['id'],['isfabu'=>1],$table);
                $this->updateCateNum($data['category_id'],'portal_post');
            }
@@ -142,7 +142,7 @@ class Portal extends BaseCommon
            $data=[
                'title'=>$item['title'],
                'seo_title'=>$item['seo_title'],
-               'type'=>'goods',
+               'type'=>'group',
                'from_id'=>$item['from_id'],
                'content'=>$item['content'],
                'videos'=>$item['videos'],
@@ -167,7 +167,7 @@ class Portal extends BaseCommon
            if($id=$this->model->from('portal_post')->insert($data)){
                $this->outPut(' 成功添加到portal_post表'.PHP_EOL);
                $this->addComment3($item['comment'],$id,$data['create_time'],'portal_post');
-               $this->addTag($id,$item['tag'],'portal_goods',0);
+               $this->addTag($id,$item['tag'],'portal_group',0);
                $this->update($item['id'],['isfabu'=>1],$table);
                $this->updateCateNum($data['category_id'],'portal_post');
            }
@@ -196,7 +196,7 @@ class Portal extends BaseCommon
      * @return int
      *--------------------------------------------------------------------*/
     protected function getCategoryId($name){
-        $data=$this->model->from('category')->select('id')->eq('name',$name)->eq('type','portal_goods')->find(null,true);
+        $data=$this->model->from('category')->select('id')->eq('name',$name)->eq('type','portal_group')->find(null,true);
         if($data)
             return (int)$data['id'];
         $arr=[3,4,5,25,22,29];

@@ -32,7 +32,8 @@ class IndexCtrl extends Ctrl
             'goods'=>$postModel->search([['type','eq','goods'],['status','eq',1]],10,'create_time desc,id desc'),
             //'page'=>(string)$page,
             //'bbsData'=>$bbsModel->search([['status','eq',1],['type','eq',2]],'20','create_time desc,id desc',false,'bbs.create_time,bbs.comments_num,bbs.id,bbs.category_id,bbs.title'),
-            'groups'=>$postModel->from('category')->eq('pid',1)->order('counts desc,id desc')->limit(12)->findAll(true),
+            //'groups'=>$postModel->from('category')->eq('pid',1)->order('counts desc,id desc')->limit(12)->findAll(true),
+            'groups'=>$postModel->select('name,slug,counts,thumb')->from('category')->eq('type','portal_group')->order('counts desc,id desc')->limit(12)->findAll(true),
             //'topics'=>$postModel->from('tag')->eq('status',1)->order('create_time desc,id desc')->limit(10)->findAll(true),
         ],false);
     }

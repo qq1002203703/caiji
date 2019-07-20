@@ -3,11 +3,11 @@
 <title><?=($category['seo_title']?:$category['name']);?>_小组_<?=$site_name?></title>
 <meta name="keywords" content="<?=$category['seo_keywords']?>">
 <meta name="description" content="<?=$category['seo_description']?>">
-<link rel="canonical" href="<?=url('@goods_list@',['slug'=>$category['slug']],$site_url)?>">
+<link rel="canonical" href="<?=url('@group_list@',['slug'=>$category['slug']],$site_url)?>">
 {%end%}
 
 {%block@article%}
-<div class="yang-bread f30 pl1 mt1"><a href="/">首页</a>&gt<?=$bread;?></div>
+<div class="yang-bread f30 pl1 mt1"><a href="/">首页</a>&gt<a href="/group/all">小组</a>&gt<?=$bread;?></div>
 <div class="w75 clearfix grid">
     <div class="yang-tag-img fl w20 pl3 mt3">
         <?php if($category['thumb']):?>
@@ -21,7 +21,7 @@
         <div class="yang-desc pl3 pr3 color3 f30">
             <p>小组话题：<?=$category['counts']?></p>
             <?=$category['content']?>
-            <p>相关小组：<?php if($randoms): foreach ($randoms as $item):?><span class="dib mr1"><a href="<?=url('@goods_list@',['slug'=>$item['slug']])?>"><?=$item['name']?></a></span><?php endforeach;endif;?></p>
+            <p>相关小组：<?php if($randoms): foreach ($randoms as $item):?><span class="dib mr1"><a href="<?=url('@group_list@',['slug'=>$item['slug']])?>"><?=$item['name']?></a></span><?php endforeach;endif;?></p>
         </div>
     </div>
 </div>
@@ -35,7 +35,7 @@
                 </div>
                 <div class="item-r w57 ml1">
                     <div class="title color3 f32">
-                        <a href="<?=url('@goods@',['id'=>$article['id']])?>"><?=$article['title']?></a>
+                        <a href="<?=url('@group@',['id'=>$article['id']])?>"><?=$article['title']?></a>
                     </div>
                     <div class="sub color4 f30">
                         <span class="dib"><?=date('Y-m-d H:i',$article['create_time'])?></span>

@@ -14,9 +14,9 @@
                     <div class="yang-box">
                         <div class="yang-left">
                             <?php if($tag['thumb']):?>
-                            <img id="topic-img" class="yang-img" src="<?=$tag['thumb']?>_200x200.jpg" alt="<?=$tag['name']?>" title="点击查看大图" data="<?=$tag['thumb']?>">
+                            <img id="topic-img" class="yang-img" src="<?=$tag['thumb']?>" alt="<?=$tag['name']?>" title="点击查看大图" data="<?=$tag['thumb']?>">
                             <?php else:?>
-                                <img class="yang-img" src="/uploads/images/no.gif" alt="没有图片">
+                                <img class="yang-img" src="<?=$tuku?>/uploads/images/no.gif" alt="没有图片">
                             <?php endif;?>
                         </div>
                         <div class="yang-right">

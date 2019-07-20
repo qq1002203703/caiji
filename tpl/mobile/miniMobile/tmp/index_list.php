@@ -2,7 +2,7 @@
     <h2 class="yang-title-border f32 pl1 mb1">最新小组</h2>
     <?php foreach ($groups as $item):?>
         <div class="col-4">
-            <a class="link" href="<?=url('@goods_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
+            <a class="link" href="<?=url('@group_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
                 <img class="h15" <?=($item['thumb'] ?'src="'.$item['thumb'].'" alt="'.$item['name'].'"' : 'src="'.$tuku.'/uploads/images/no.gif" alt="没有缩略图"')?>>
                 <span class="title f30 color3"><?=$item['name'];?></span>
                 <span class="sub  f28 color4 mb2">小组话题: <span class="red"><?=$item['counts']?></span></span>

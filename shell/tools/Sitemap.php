@@ -112,8 +112,11 @@ class Sitemap extends BaseCommon
                         case 'article':
                             $url_true=$siteUrl.'/article/'.$item['id'].'.html';
                             break;
-                        case 'goods':
+                        case 'group':
                             $url_true=$siteUrl.'/group/'.$item['id'].'.html';
+                            break;
+                        case 'goods':
+                            $url_true=$siteUrl.'/goods/'.$item['id'].'.html';
                             break;
                         case 'soft':
                             $url_true=$siteUrl.'/soft/'.$item['id'].'.html';

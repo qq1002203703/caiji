@@ -4,10 +4,10 @@
 <title><?=$title;?>_<?=$site_name?></title>
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
 <meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.$site_name.'还为你提供'.$title.'视频在线免费下载':$title)?>">
-<link rel="canonical" href="<?=url('@goods@',['id'=>$data['id']],$site_url)?>">
+<link rel="canonical" href="<?=url('@group@',['id'=>$data['id']],$site_url)?>">
 {%end%}
 {%block@article%}
-<div class="yang-bread f30 pl1 mt1"><a href="/">首页</a>&gt<?=$bread;?>详情</div>
+<div class="yang-bread f30 pl1 mt1"><a href="/">首页</a>&gt<a href="/group/all">小组</a>&gt<?=$bread;?>详情</div>
 <h2 class="f40 color3 mt3 mb2 pl3 pr3 t-c"><?=$title;?></h2>
 <div class="yang-desc pl3 pr3 color4 f28">
     <?=date('Y-m-d',$data['create_time']);?> <i class="icon iconfont icon-refresh" title="人气"></i> <?=$data['views']?>

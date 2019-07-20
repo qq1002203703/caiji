@@ -3,7 +3,7 @@
         <h2 class="title">热门小组</h2>
         <?php foreach ($groups as $item):?>
             <li class="item mr15" style="width: 170px;margin-bottom: 18px;">
-                <a class="link" href="<?=url('@goods_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
+                <a class="link" href="<?=url('@group_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
                     <div class="layui-row">
                         <div class="layui-col-md4">
                             <div class="pic" style="height: 58px">

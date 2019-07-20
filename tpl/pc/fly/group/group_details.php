@@ -4,8 +4,8 @@
 <title><?=$title;?>_<?=$site_name?></title>
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
 <meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.$site_name.'还为你提供'.$title.'视频在线免费下载':$title)?>">
-<meta name="mobile-agent" content="format=html5;url=<?=url('@goods@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
-<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@goods@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
+<meta name="mobile-agent" content="format=html5;url=<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
+<link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
 <style>
     .detail-box h1.video-title{font-size: 16px;color: #666;text-align: center;margin-bottom:10px; }
     .video-container{max-width: 620px;margin: 0 auto;border: 1px solid #000}
@@ -18,6 +18,7 @@
             <div class="fly-panel detail-box">
                 <div class="layui-breadcrumb" lay-separator="&gt;">
                     <a href="/">首页</a>
+                    <a href="/group/all">小组</a>
                     <?=$bread?>
                     <a href="#">详情</a>
                 </div>
@@ -76,7 +77,7 @@
                 <div class="fly-panel-title">相关推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@goods@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>');?>
                     </div>
                 </div>
             </div>
@@ -84,7 +85,7 @@
                 <div class="fly-panel-title">其他推荐</div>
                 <div class="fly-panel-main">
                     <div class="layui-row layui-col-space3">
-                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@goods@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
+                        <?php //echo getRelatedPostsByCategory($data['category_id'],'@group@',6,'<div class="layui-col-xs6"><a class="sidebar-img" href="{%url%}" title="{%title%}"><img src="{%thumb%}" alt="{%title%}"></a></div>',false);?>
                     </div>
                 </div>
             </div>

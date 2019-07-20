@@ -46,6 +46,23 @@
                 </li>
                 <li class="layui-nav-item">
                     <a href="javascript:;">
+                        <i class="nav-icon layui-icon layui-icon-username"></i>
+                        <strong>小组管理</strong>
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd id="portal-post-group">
+                            <a class="menu" href="<?=url('admin/portal/post')?>?type=group">列表</a>
+                        </dd>
+                        <dd id="portal-post-add-group">
+                            <a class="menu" href="<?=url('admin/portal/post_add')?>?type=group">发布</a>
+                        </dd>
+                        <dd id="portal-category-group">
+                            <a class="menu" href="<?=url('admin/portal/category')?>?type=group">分类</a>
+                        </dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item">
+                    <a href="javascript:;">
                         <i class="nav-icon layui-icon layui-icon-play"></i>
                         <strong>视频管理</strong>
                     </a>
