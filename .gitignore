@@ -26,7 +26,7 @@ public/do.php
 public/test.php
 #tpl
 tpl/pc/fly/tmp/
-/tpl/mobile/miniMobile/tmp/
+tpl/mobile/miniMobile/tmp/
 #pic
 !public/uploads/images/no.gif
 !public/uploads/images/nopic.gif
