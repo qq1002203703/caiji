@@ -37,14 +37,5 @@
       "email": "46502166@qq.com",
       "homepage": "http://www.dahulu.cc"
     }
-  ],
-  "repositories": [
-    {
-      "type": "composer",
-      "url": "https://packagist.laravel-china.org"
-    },
-    {
-      "packagist": false
-    }
   ]
 }

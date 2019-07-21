@@ -5,3 +5,4 @@ Disallow: /static/
 Disallow: /uploads/
 Disallow: /index/
 Disallow: /portal/
+Sitemap: /sitemap-portal.txt
