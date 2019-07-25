@@ -18,6 +18,7 @@ use shell\Spider;
 class Bilibili extends Spider {
     public $appName='';
     public $fieldsFilter=['iscaiji','isend','isfabu','isdownload','isdone','times','caiji_name'];
+    public $options;
     protected $fileBodyName='bilibili';
     protected $error=[
         1=>'视频已失效',
@@ -34,38 +35,47 @@ class Bilibili extends Spider {
     protected function _init(){
         $this->_setCommandOptions(['-n'=>['appName']],$this->param);
     }
+    protected function setOptions($options){
+        if(!$options)
+            exit('配置文件不存在'.PHP_EOL);
+        $this->options=$options;
+    }
 
     //搜索采集========================================================
     public function search(){
-        $config=Conf::all($this->appName,false,'config/bilibili/');
-        if(!$config)
-            exit('配置文件不存在'.PHP_EOL);
+        $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
         $this->init([],'http_init');
-        switch ($config['search_type']){
+        switch ($this->options['search_type']){
             case 'video'://视频
-                $code=$this->searchVideo($config['search_keyword'],$config['app_name'],$config['app_keywords']);
+                $code=$this->searchVideo();
                 break;
             case 'bangumi'://番剧
+                $code=-1;
                 break;
             case 'article'://文章
+                $code=-1;
                 break;
             case 'pgc'://影视
+                $code=-1;
                 break;
             default:
                 exit('不存在的search_type！');
         }
         if($code!==0)
             echo '  采集出错，error:'.$this->error[$code].PHP_EOL;
-        else
+        else{
             echo '  采集成功'.PHP_EOL;
+            echo '0'.PHP_EOL;
+        }
+
     }
 
-    protected function searchVideo($keyword,$app_name,$app_keywords){
+    protected function searchVideo(){
         $this->currentAction='searchVideo';
         $page=9999;
-        $url='https://search.bilibili.com/video?keyword='.urldecode($keyword).'&page=';
+        $url='https://search.bilibili.com/video?keyword='.urlencode($this->options['search_keyword']).'&page=';
         for ($i=1;$i<=$page;$i++){
-            $this->outPut(' 开始采集第'.$i.'页搜索'.PHP_EOL);
+            $this->outPut(' 开始采集第'.$i.'页搜索--------'.PHP_EOL);
             $res=$this->client->http($url.$i);
             $check=$this->searchCheckResult($res);
             if($check!==0)
@@ -76,7 +86,7 @@ class Bilibili extends Spider {
                 dump($res);
                 return -3;
             }
-            if(!isset($data['videoData'])){
+            if(!isset($data['videoData'])|| !$data['videoData']){
                 dump($res);
                 dump($data);
                 return -4;
@@ -88,12 +98,12 @@ class Bilibili extends Spider {
                 if(!$this->saveContent([
                     'from_id'=>$item['id'],
                     'tag'=>$item['tag'],
-                    'thumb'=>$item['pic'],
+                    'thumb'=>'http:'.$item['pic'],
                     'title'=>strip_tags($item['title']),
-                    'content'=>$this->filter($item['description'],$app_keywords),
+                    'content'=>$this->filter($item['description']),
                     'username'=>$item['author'],
                     'create_time'=>$item['pubdate'],
-                    'caiji_name'=>$app_name,
+                    'caiji_name'=>$this->options['app_name'],
                 ]))
                     return -6;
             }
@@ -132,11 +142,9 @@ class Bilibili extends Spider {
      * 评论和视频cid的采集
      *---------------------------------------------------------------------*/
     public function get(){
-        $config=Conf::all($this->appName,false,'config/bilibili/');
-        if(!$config)
-            exit('配置文件不存在'.PHP_EOL);
+        $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
         $table='caiji_bilibili';
-        $where=[['iscaiji','eq',0]];
+        $where=[['iscaiji','eq',0],['caiji_name','eq',$this->options['app_name']]];
         $total=$this->model->count([
             'from'=>$table,
             'where'=>$where
@@ -144,34 +152,34 @@ class Bilibili extends Spider {
         $this->init([],'http_init');
         $this->doLoop($total,function ($perPage)use ($table,$where){
             return $this->model->from($table)->_where($where)->limit($perPage)->findAll(true);
-        },function ($item)use ($table,$config){
+        },function ($item)use ($table){
             echo '开始处理：id=>'.$item['id'].',from_id=>'.$item['from_id'].'---------------'.PHP_EOL;
             $code=$this->spiderVideo($item['from_id'],$result);
             $update=[];
             if($code<0){
                 exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
-            }elseif($code==1){
+            }elseif($code==1 || $result['comment_counts']<$this->options['comment_min']){
                 $update['isfabu']=1;
             }else{
-                $code=$this->spiderComment($item['from_id'],$config['app_keywords'],$config['app_name']);
-                if($code!==0){
-                    exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
+                if($result['comment_counts']>0){
+                    $code=$this->spiderComment($item['from_id']);
+                    if($code!==0){
+                        exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
+                    }
+                    $update['comment_counts']=$this->model->count([
+                        'from'=>'caiji_bilibili_comment',
+                        'where'=>[['fid','eq',$item['from_id']]]
+                    ]);
+                }else{
+                    $update['comment_counts']=0;
                 }
                 $update['cid']=$result['cid'];
                 $update['videos']=$result['videos'];
+                $text=$this->getRandomTitleText($item['from_id'],$update['comment_counts']);
+                $update['seo_title']=self::autoTitle($item['title'],$item['username'],$item['tag'],$text,$this->options['title_keywords']);
                 unset($result);
             }
             $update['iscaiji']=1;
-            $update['comment_counts']=$this->model->count([
-                'from'=>'caiji_bilibili_comment',
-                'where'=>[['fid','eq',$item['from_id']]]
-            ]);
-            if( $comments=$this->model->from($table.'_comment')->eq('fid',$item['from_id'])->order('length desc')->limit(30)->findAll(true)) {
-                $text = trim(self::filterTags(preg_replace('/\[[^\]]*\]/', '', strip_tags($comments[array_rand($comments)]['content']))));
-                unset($comments);
-            }else
-                $text=$config['title_text'][array_rand($config['title_text'])];
-            $update['seo_title']=self::auoTitle($item['title'],$item['username'],$item['tag'],$text,$config['title_keywords']);
             if($this->model->from($table)->eq('id',$item['id'])->update($update))
                 echo '  成功：更新'.PHP_EOL;
             else
@@ -179,10 +187,52 @@ class Bilibili extends Spider {
             msleep(1200,300);
             //exit();
         });
+        exit('0');
+    }
+
+    public function get_video(){
+        $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
+        $code=$this->spiderVideo($this->options['aid'],$result,true);
+        if($code<0){
+            exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
+        } elseif($code==1|| $result['comment_counts']<$this->options['comment_min']){
+            $result=[];
+            $result['isfabu']=1;
+        }else{
+            //采集标签
+            $code=$this->spiderTags($this->options['aid'],$result['tag']);
+            if($code<0){
+                exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
+            }
+            $result['content']=$this->filter($result['content']);
+        }
+        //保存
+        if(!$this->saveContent($result))
+            exit('保存到数据库失败'.PHP_EOL);
+        exit('0');
+    }
+
+    public function get_comment(){
+        $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
+        $code=$this->spiderComment($this->options['aid']);
+        if($code!==0){
+            exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
+        }
+        $update=[];
+        $update['iscaiji']=1;
+        $update['comment_counts']=$this->model->count([
+            'from'=>'caiji_bilibili_comment',
+            'where'=>[['fid','eq',$this->options['aid']]]
+        ]);
+        if($this->model->from('caiji_bilibili')->eq('from_id',$this->options['aid'])->update($update)){
+            echo '  成功：更新'.PHP_EOL;
+            exit('0');
+        } else
+            echo '  失败：更新'.PHP_EOL;
     }
 
     //视频cid采集
-    protected function spiderVideo($fid,&$result){
+    protected function spiderVideo($fid,&$result,$getDetails=false){
         $this->currentAction='spiderVideo';
         $url='https://api.bilibili.com/x/web-interface/view?aid='.$fid;
         $this->outPut(' 开始采集 aid=>'.$fid.' 的cid'.PHP_EOL);
@@ -212,19 +262,27 @@ class Bilibili extends Spider {
                 if(strlen($result['videos'])>65535)
                     return -5;
             }else{
-                $result['videos']='{"type":"bilibili","data":[{"page":1,"cid":'.$result['cid'].',"title":""}]';
+                $result['videos']='{"type":"bilibili","data":[{"page":1,"cid":'.$result['cid'].',"title":""}]}';
+            }
+            $result['comment_counts']=$res['data']['stat']['reply'];
+            if($getDetails){
+                $result['thumb']=$res['data']['pic'];
+                $result['title']=$res['data']['title'];
+                $result['create_time']=$res['data']['ctime'];
+                $result['content']=$res['data']['desc'];
+                $result['username']=$res['data']['owner'];
             }
         }
         unset($res);
         return 0;
     }
     //采集评论
-    protected function spiderComment($fid,$app_keywords,$app_name){
+    protected function spiderComment($fid){
         $this->currentAction='spiderComment';
-        $url='https://api.bilibili.com/x/v2/reply?type=1&oid='.$fid.'&sort=0&pn=';
+        $url='https://api.bilibili.com/x/v2/reply?type=1&oid='.$fid.'&sort=2&pn=';
         $max_page=999999;
         for ($i=1;$i<=$max_page;$i++){
-            $this->outPut(' 开始采集第'.$i.'页评论'.PHP_EOL);
+            $this->outPut(' 开始采集第'.$i.'页评论--------'.PHP_EOL);
             $res=$this->client->http($url.$i);
             if($res===false){
                 return -1;
@@ -245,8 +303,13 @@ class Bilibili extends Spider {
             }
             if($res['data']['page']['count']==0)
                 return 0;
-            if($max_page==999999)
+            if($max_page==999999){
                 $max_page=(int)ceil($res['data']['page']['count']/20);
+                if($max_page > $this->options['comment_max']){
+                    $max_page= $this->options['comment_max'];
+                }
+
+            }
             if($res['data']['replies']){
                 foreach ($res['data']['replies'] as $reply){
                     $commentData=[
@@ -255,20 +318,49 @@ class Bilibili extends Spider {
                         'from_id'=>$reply['rpid'],
                         'username'=>$reply['member']['uname'],
                         'fid'=>$fid,
-                        'caiji_name'=>$app_name
+                        'caiji_name'=>$this->options['app_name']
                     ];
                     if(isset($reply['replies']) && $reply['replies']){
                         $commentData['children']=count($reply['replies']);
                         $arr=[];
                         foreach ($reply['replies'] as $item){
-                            $arr[]=$item['ctime'].'{%||%}'.$item['member']['uname'].'{%||%}'.$item['content']['message'];
+                            $arr[]=$item['ctime'].'{%||%}'.$item['member']['uname'].'{%||%}'.$this->filter($item['content']['message']);
                         }
                         $commentData['more']=implode('{%|||%}',$arr);
                     }
                     //评论入库
-                    $this->saveComment($commentData,$app_keywords);
+                    $this->saveComment($commentData);
                 }
             }
+        }
+        return 0;
+    }
+
+    protected function spiderTags($aid,&$result){
+        $this->currentAction='spiderTags';
+        $url='http://api.bilibili.com/x/tag/archive/tags?aid='.$aid;
+        $this->outPut(' 开始采集tag标签--------'.PHP_EOL);
+        $res=$this->client->http($url);
+        if($res===false){
+            return -1;
+        }
+        if($this->client->getHttpCode()!==200){
+            echo 'http_code:'.$this->client->getHttpCode().PHP_EOL;
+            return -2;
+        }
+        $res=json_decode($res,true);
+        if(!$res){
+            return -3;
+        }
+        if(!isset($res['data'])){
+            return -4;
+        }
+        $result='';
+        if($res['data']){
+            foreach ($res['data'] as $item){
+                $result.=$item['tag_name'].',';
+            }
+            $result=rtrim($result,',');
         }
         return 0;
     }
@@ -278,7 +370,7 @@ class Bilibili extends Spider {
      * @param array $data
      * @return bool
      *---------------------------------------------------------------------*/
-    protected function saveComment($data,$app_keywords){
+    protected function saveComment($data){
         $table='caiji_bilibili_comment';
         if($this->model->from($table)->eq('from_id',$data['from_id'])->find(null,true)){
             $this->outPut('  评论from_id=>'.$data['from_id'].',已经入库过了'.PHP_EOL);
@@ -290,7 +382,7 @@ class Bilibili extends Spider {
             $this->outPut('  评论from_id=>'.$data['from_id'].',是垃圾评论'.PHP_EOL);
             return true;
         }
-        $data['content']=$this->filter($data['content'],$app_keywords);
+        $data['content']=$this->filter($data['content']);
         //UPDATE `zcm_caiji_bilibili_comment` SET is_content=1 WHERE (children>1 AND length>30) OR length>120
         if((isset($data['children'])&& $data['children'] >1 && $data['length']>30) || $data['length']>120)
             $data['is_content']=1;
@@ -313,12 +405,12 @@ class Bilibili extends Spider {
         return ($reply_counts==0 && $length<30 && preg_match('/[\x{4e00}-\x{9fa5}]+/u',$content)==0)? true:false;
     }
 
-    protected function filter($str,$app_keywords){
-        if(is_array($app_keywords)){
-            $app_keyword=$app_keywords[array_rand($app_keywords)];
+    protected function filter($str){
+        if(is_array($this->options['app_keywords'])){
+            $app_keyword=$this->options['app_keywords'][array_rand($this->options['app_keywords'])];
         }else
-            $app_keyword=$app_keywords;
-        unset($app_keywords);
+            $app_keyword=$this->options['app_keywords'];
+        //unset($app_keywords);
         return '<p>' . preg_replace([
                 '%https?://[-A-Za-z0-9+&@#/\%?=~_|!:,.;]+[-A-Za-z0-9+&@#/\%=~_|]%',
                 '%[0-9a-zA-Z.]+\.(com|net|cn|org|cc|us|vip|club|xyz|me|io|wang|win)%',
@@ -328,7 +420,8 @@ class Bilibili extends Spider {
                 '/\n+/',
                 '/\s{2,}/',
                 '/up主/i',
-                '\[.*?\]'
+                '/\[.*?\]/',
+                '%回复 @.+?:%'
             ],[
                 '',
                 '',
@@ -338,10 +431,25 @@ class Bilibili extends Spider {
                 '<br>',
                 ' ',
                 '楼主',
+                '',
                 ''
             ],$str). '</p>';
     }
 
+    /** ------------------------------------------------------------------
+     * 获取随机的标题的补充文字
+     * @param int $fid
+     * @param int $comment_counts
+     * @return string
+     *---------------------------------------------------------------------*/
+    protected function getRandomTitleText($fid,$comment_counts){
+        if($comment_counts>0){
+            $comments=$this->model->select('content')->from('caiji_bilibili_comment')->eq('fid',$fid)->order('length desc')->limit(30)->findAll(true);
+            return trim(self::filterTags(preg_replace('/\[[^\]]*\]/', '', strip_tags($comments[array_rand($comments)]['content']))));
+        }else{
+            return $this->options['title_text'][array_rand($this->options['title_text'])];
+        }
+    }
     protected function http_init(){
         $this->newClient(['opt'=>[
             CURLOPT_TIMEOUT=>8,//下载时应该按目标文件大小设置大一点
@@ -375,7 +483,7 @@ class Bilibili extends Spider {
         ]);
     }
 //标题处理=====================================================
-    public static function auoTitle($title,$username,$tags,$text,$keywords){
+    public static function autoTitle($title,$username,$tags,$text,$keywords){
         $title=self::titleFilter($title);
         if($tags){
             $tags=explode(',',$tags);
@@ -445,29 +553,34 @@ class Bilibili extends Spider {
     }
 
     public function fabu(){
-        $config=Conf::all($this->appName,false,'config/bilibili/');
-        if(!$config)
-            exit('请输入项目名，格式: -n app_name '.PHP_EOL);
+        $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
         echo '开始发布内容……'.PHP_EOL;
-        $this->fabu_content($config['app_name'],$config['fields_filter']['content']);
+        $this->fabu_content($this->options['fields_filter']['content']);
         echo '开始发布评论……'.PHP_EOL;
-        $this->fabu_comment($config['app_name'],$config['fields_filter']['comment']);
+        $this->fabu_comment($this->options['fields_filter']['comment']);
     }
 
-    public function fabu_content($app_name,$fields_filter=''){
+    public function fabu_content($fields_filter=''){
         $table='caiji_bilibili';
-        $where=[['isfabu','eq',0],['iscaiji','eq',1],['caiji_name','eq',$app_name]];
-        $total=$this->model->count([
+        $where=[['isfabu','eq',0],['iscaiji','eq',1],['caiji_name','eq',$this->options['app_name']]];
+        if(isset($this->startId) && $this->startId>0)
+            $where[]=['id','gt',$this->startId];
+        if(isset($this->maxId) && $this->maxId>0 && $this->maxId >$this->startId )
+            $where[]=['id','lte',$this->maxId];
+        /*$total=$this->model->count([
             'from'=>$table,
             'where'=>$where
-        ]);
-        if(!$this->client)
+        ]);*/
+        $total=1000000;
+        if(!$this->client){
             $this->newClient();
+            $this->client->httpSetting(['isOpenCurlTimeInterval'=>false,]);
+        }
         $this->setFields($fields_filter);
         $fields=$this->getFields($table);
         $this->doLoop($total,function ($perPage)use ($table,$where,$fields){
             return $this->model->select($fields)->from($table)->_where($where)->order('id')->limit($perPage)->findAll(true);
-        },function ($item)use ($table,$app_name){
+        },function ($item)use ($table){
             echo '正在发布：id=>'.$item['id'].'---------------'.PHP_EOL;
             $id=$item['id'];
             unset($item['id']);
@@ -476,7 +589,7 @@ class Bilibili extends Spider {
             $item['comment']=$this->getCommentFabu($item['from_id'],$in);
             unset($item['caiji_name']);
             //dump($item);exit();
-            $ret=$this->client->http('http://www.'.$app_name.'/portal/fabu/table?pwd=Djidksl$$EER4ds58cmO','post',$item);
+            $ret=$this->client->http('http://www.'.$this->options['app_name'].'/portal/fabu/table?pwd=Djidksl$$EER4ds58cmO','post',$item);
             if(!$ret){
                 exit('接口连接失败'.PHP_EOL);
             }
@@ -494,24 +607,36 @@ class Bilibili extends Spider {
             //exit();
             //if($this->checkStop())
                 //exit();
+            //msleep(1000);
         });
+        //exit();
     }
     //评论发布
-    public function fabu_comment($app_name,$fields_filter=''){
+    public function fabu_comment($fields_filter=''){
         $table='caiji_bilibili_comment';
-        $where=[['isfabu','eq',0],['caiji_name','eq',$app_name],['length','gt',7]];
-        $total=$this->model->count([
+        $where=[['caiji_name','eq',$this->options['app_name']],['isfabu','eq',0],['length','gt',7]];
+        if(isset($this->startId) && $this->startId>0)
+            $where[]=['id','gt',$this->startId];
+        if(isset($this->maxId) && $this->maxId>0 && $this->maxId >$this->startId )
+            $where[]=['id','lte',$this->maxId];
+        /*$total=$this->model->count([
             'from'=>$table,
             'where'=>$where
-        ]);
+        ]);*/
+        $total=99999999;
+        //dump($total);
+        //exit();
         if(!$this->client)
             $this->newClient();
         $this->setFields($fields_filter);
         $fields=$this->getFields($table);
         $this->doLoop($total,function ($perPage)use ($table,$where,$fields){
-            return $this->model->select($fields)->from($table)->_where($where)->order('id')->limit($perPage)->findAll(true);
-        },function ($item)use ($table,$app_name){
+            return $this->model->select($fields)->from($table)->_where($where)->order('children desc,length desc')->limit($perPage)->findAll(true);
+        },function ($item)use ($table){
             echo '正在发布：id=>'.$item['id'].'---------------'.PHP_EOL;
+            $xx=$this->model->select('isfabu')->from($table)->eq('id',$item['id'])->find(null,true);
+            //if($xx['isfabu']==1)
+                //return '';
             $id=$item['id'];
             unset($item['id']);
             $item['table']='bilibili';
@@ -519,18 +644,103 @@ class Bilibili extends Spider {
             if($item['more']===null)
                 unset($item['more']);
             //dump($item);exit();
-            $ret=$this->client->http('http://www.'.$app_name.'/portal/fabu/table?pwd=Djidksl$$EER4ds58cmO','post',$item);
+            $ret=$this->client->http('http://www.'.$this->options['app_name'].'/portal/fabu/table?pwd=Djidksl$$EER4ds58cmO','post',$item);
             if(!$ret){
                 exit('接口连接失败'.PHP_EOL);
             }
             if($ret==='发布成功'){
                 $this->model->from($table)->eq('id',$id)->update(['isfabu'=>1]);
                 echo '发布成功';
+                if($this->counter($item['fid']))
+                    return 'break';
             }else
                 exit('发布失败：'.$ret);
             //exit();
             //msleep(1000,100);
+            return '';
         });
+    }
+    public function fabu_comment2($fields_filter=''){
+        if(!$this->options)
+            $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
+        $table='caiji_bilibili_comment';
+        $where=$where2=[['caiji_name','eq',$this->options['app_name']],['isfabu','eq',0]];
+        if(isset($this->startId) && $this->startId>0)
+            $where[]=['id','gt',$this->startId];
+        if(isset($this->maxId) && $this->maxId>0 && $this->maxId >$this->startId )
+            $where[]=['id','lte',$this->maxId];
+        $total=99999999;
+        //dump($total);
+        //exit();
+        if(!$this->client)
+            $this->newClient();
+        $this->setFields($fields_filter);
+        $fields=$this->getFields($table);
+        for ($i=0;$i<$total;$i++){
+            $data=$this->model->select('id,fid')->from($table)->_where($where)->find(null,true);
+            if(!$data){
+                echo $this->model->getSql().PHP_EOL;
+                echo '没有需要发布的数据'.PHP_EOL;
+                break;
+            }
+
+            echo '------处理fid=>'.$data['fid'];
+            $publishCount=$this->model->count([
+                'from'=>$table,
+                'where'=>[['fid','eq',$data['fid']],['isfabu','eq',1]]
+            ]);
+            echo ',已经发布过=>'.$publishCount;
+            $max=mt_rand(21,45);
+            echo ',max=>'.$max;
+            if($publishCount>=$max){
+                $this->model->from($table)->eq('fid',$data['fid'])->update(['isfabu'=>1]);
+                echo '已经发布了 '.$publishCount.' 条---------------'.PHP_EOL;
+                continue;
+            }
+            $dataArr=$this->model->select($fields)->from($table)->_where($where2)->eq('fid',$data['fid'])->order('children desc,length desc')->limit($max-$publishCount)->findAll(true);
+            echo ',需要发布=>'.(count($dataArr)).' 条-------'.PHP_EOL;
+            foreach ($dataArr as $item){
+                echo '正在发布：id=>'.$item['id'].'---------------'.PHP_EOL;
+                $id=$item['id'];
+                unset($item['id']);
+                $item['table']='bilibili';
+                $item['type']='comment';
+                if($item['more']===null)
+                    unset($item['more']);
+                //dump($item);exit();
+                $ret=$this->client->http('http://www.'.$this->options['app_name'].'/portal/fabu/table?pwd=Djidksl$$EER4ds58cmO','post',$item);
+                if(!$ret){
+                    exit('接口连接失败'.PHP_EOL);
+                }
+                if($ret==='发布成功'){
+                    $this->model->from($table)->eq('id',$id)->update(['isfabu'=>1]);
+                    echo '发布成功'.PHP_EOL;
+                }else
+                    exit('发布失败：'.$ret);
+            }
+            unset($dataArr);
+            $this->model->from($table)->eq('fid',$data['fid'])->eq('isfabu',0)->update(['isfabu'=>1]);
+            echo '-------fid=>'.$data['fid'].' 全部处理完成----------'.PHP_EOL;
+            //exit();
+            //msleep(10000,100);
+        }
+        return '';
+    }
+    //发布数大于100后 就不再发布
+    protected function counter($fid){
+        $count=$this->model->count([
+            'from'=>'caiji_bilibili_comment',
+            'where'=>['fid'=>$fid,'isfabu'=>1],
+        ]);
+        $rand=mt_rand(43,63);
+        if($count>$rand){
+            $this->model->from('caiji_bilibili_comment')->eq('fid',$fid)->eq('isfabu',0)->update([
+                'isfabu'=>1,
+                'status'=>1
+            ]);
+            return true;
+        }
+        return false;
     }
 
     /** ------------------------------------------------------------------
@@ -544,7 +754,7 @@ class Bilibili extends Spider {
      * @return string
      *---------------------------------------------------------------------*/
     protected function getCommentFabu($fid,&$in){
-        $data=$this->model->from('caiji_bilibili_comment')->_where([['is_content','eq',0],['fid','eq',$fid],['isfabu','eq',0]])->order('children desc,length desc')->limit(mt_rand(5,9))->findAll(true);
+        $data=$this->model->from('caiji_bilibili_comment')->_where([['fid','eq',$fid],['isfabu','eq',0]])->order('length desc,children desc,id')->limit(mt_rand(8,12))->findAll(true);
         $in=[];
         if($data){
             $str_arr=[];
@@ -593,6 +803,61 @@ class Bilibili extends Spider {
                 echo '  失败：更新'.PHP_EOL;
             //msleep(4200,2000);
         });
+    }
+
+    public function dodo2(){
+        $table='caiji_bilibili';
+        $where=[['isdone','eq',0]];
+        $total=$this->model->count([
+            'from'=>$table,
+            'where'=>$where
+        ]);
+        $this->doLoop($total,function ($perPage)use ($table,$where){
+            return $this->model->select('id,from_id')->from($table)->_where($where)->limit($perPage)->findAll(true);
+        },function ($item)use ($table){
+            echo '开始处理：id=>'.$item['id'].'---------------'.PHP_EOL;
+            $update=[ 'isdone'=>1];
+            $table2=$table.'_comment';
+            $where=[['isfabu','eq',0],['fid','eq',$item['from_id']]];
+            $total=$this->model->count([
+                'from'=>$table,
+                'where'=>$where
+            ]);
+            $this->doLoop($total,function ($perPage)use ($table2,$where){
+                return $this->model->select('id,from_id')->from($table2)->_where($where)->order('length desc,id')->limit($perPage)->findAll(true);
+            },function ($item2){
+                echo '  开始处理评论：id=>'.$item2['id'].'---------------'.PHP_EOL;
+
+            });
+            if($this->model->from($table)->eq('id',$item['id'])->update($update))
+                echo '  成功：更新'.PHP_EOL;
+            else
+                echo '  失败：更新'.PHP_EOL;
+           //msleep(2000);
+        });
+    }
+
+    public function dodo3(){
+        $table='portal_post';
+        $data=$this->model->select('id,videos')->from($table)->order('id')->limit(100)->findAll(true);
+        if(!$data){
+            echo '没有数据'.PHP_EOL;
+            return;
+        }
+        foreach ($data as $item){
+            echo '开始处理：id=>'.$item['id'].'---------------'.PHP_EOL;
+            if($item['videos'] && preg_match('/\}$/',$item['videos'])<1){
+                if($this->model->from($table)->eq('id',$item['id'])->update([
+                    'videos'=>$item['videos'].'}',
+                ]))
+                    echo '  成功：更新'.PHP_EOL;
+                else
+                    echo '  失败：更新'.PHP_EOL;
+                //exit();
+            }else{
+                echo '  不用更新'.PHP_EOL;
+            }
+        }
     }
 
 }

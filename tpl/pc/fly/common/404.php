@@ -1,4 +1,4 @@
-{%extend@common/pure%}
+{%extend@common/base_portal%}
 {%block@title%}
 <title>404页_<?=$site_name?></title>
 <style>
@@ -19,10 +19,5 @@
         </div>
     </div>
 </div>
-{%end%}
-
-{%block@javascript%}
-<script type="text/javascript" charset="utf-8">
- </script>
 {%end%}
 

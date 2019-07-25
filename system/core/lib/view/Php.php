@@ -165,7 +165,7 @@ class Php
         }
         // 页面缓存
         ob_start();
-        ob_implicit_flush(0);
+        ob_implicit_flush(false);
         // 读取php编译存储
         $this->readFile($cacheFile, $this->data);
         // 获取并清空缓存

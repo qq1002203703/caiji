@@ -128,14 +128,14 @@ class Helper
      * curl访问网址
      * @param $url：网址
      * @param array $option
-     * @param bool $status:引用传值，请求是否成功
+     * @param int $http_code:引用传值，http_code
      * @param array $post：post数据(不填则为GET)
      * @param array $cookie：
      *          string $cookie['file']:cookie存放文件,
      *          bool $cookie['save']:是否每次访问后都自动更新cookie
      * @return string 正确返回请求网址的回应内容，失败返回错误信息
      *--------------------------------------------------------------------*/
-   static public function curl_request($url,&$status,$option=array(),$post=array(),$cookie=array()){
+   static public function curl_request($url,&$http_code,$option=array(),$post=array(),$cookie=array()){
         $default_option=[
             //目标网址
             CURLOPT_URL => $url,
@@ -171,17 +171,22 @@ class Helper
        }
        $curl = curl_init();
         curl_setopt_array($curl,($option+$default_option));
-        $data = curl_exec($curl);
+        $i=0;
+       do{
+           $data = curl_exec($curl);
+           $i++;
+       }while ($data === false && $i < 3 && msleep(700,100,false)===0);
         $msg=curl_error($curl);
-        //$info = curl_getinfo($curl);
+        $info = curl_getinfo($curl);
         curl_close($curl);
+        $http_code=$info['http_code'];
         //如果获取失败
         if ($data===false) {
-            $status=false;
+            //$status=false;
             //dump($info);
             return $msg;
         }
-       $status=true;
+       //$status=true;
         return $data;
     }
 
@@ -462,5 +467,32 @@ class Helper
     //网址解密
     public static function urlencode($url){
         return urlencode(self::encode($url));
+    }
+
+    /**--------------------------------------------------------------------
+     * 生成多个不重复的随机数
+     * @param  int $start  需要生成的数字开始范围
+     * @param  int $end   需要生成的数字结束范围
+     * @param  int $num 需要生成的随机数个数
+     * @param bool $isSort 是否需要重新排序
+     * @return array       生成的随机数集合
+     * ---------------------------------------------------------------------*/
+    static function rand_number($start=1,$end=200,$num=4,$isSort=true){
+        $num = min($num, $end - $start + 1);
+        if($num<1)
+            return [];
+        $tmp=[];
+        $i = 0;
+        while($i<$num){
+            $n = mt_rand($start,$end);
+            if (isset($tmp[$n]))
+                continue;
+            $tmp[$n] = $n;
+            $i++;
+        }
+        $tmp=array_values($tmp);
+        if($isSort)
+            sort($tmp);
+        return $tmp;
     }
 }

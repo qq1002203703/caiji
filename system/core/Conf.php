@@ -162,7 +162,7 @@ class Conf
      * @param mixed $data 数据
      * @param string $fileName 文件名
      * @param string $folder 相对于根目录的文件夹路径
-     * @return bool
+     * @return bool|int
      *--------------------------------------------------------------------*/
     static public function write($data,$fileName,$folder='config/'){
         $str="<?php \n return ".var_export($data,true).';';

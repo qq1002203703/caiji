@@ -25,6 +25,7 @@ router()
     ->get('video_play','video/:vid:d/:id:d-:pid:d.html','video/index/play','.html')
 
     ->get('member','user/:uid:d','portal/member/center','')//用户中心
+    ->get('member_all','user/all','portal/member/all','')
     ->get('member_article','user/:uid:d/article','portal/member/article','')
     ->get('member_comment','user/:uid:d/comment','portal/member/comment','')
     //->get('weixinqun','weixinqun/:id:d','weixinqun/index/weixinqun')

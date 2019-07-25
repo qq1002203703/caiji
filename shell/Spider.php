@@ -108,6 +108,11 @@ abstract class Spider extends BaseCommon
             if($isUnset)
                 $this->fieldsFilter=array_values($this->fieldsFilter);
         }
+    }
 
+    public function dumpSave($var){
+        ob_start();
+        var_dump($var);
+        file_put_contents(ROOT.'/cache/1.php',ob_get_clean());
     }
 }

@@ -85,17 +85,17 @@ class FabuCtrl extends ApiCtrl
                 if(!$data['content']) die('内容不能为空');
                 if(!$data['from_id']) die('from_id不能为空');
                 if(!$data['fid']) die('fid不能为空');
-                if($data['is_content']){
+                /*if($data['is_content']){
                     $table='caiji_bilibili';
                     $where=[['pfid','gt',0],'from_id'=>$data['from_id']];
                     $data['pfid']=$data['fid'];
                     if($data['more'])
                         $data['comment']=str_replace(['{%|||%}','{%||%}'],['{%@@@%}','{%@@%}'],$data['more']);
                     $data['title']=mb_substr(strip_tags($data['content']),0,21);
-                }else{
+                }else{*/
                     $table='caiji_bilibili_comment';
                     $where=['from_id'=>$data['from_id']];
-                }
+                //}
                 break;
             default:
                 die('type不正确');

@@ -4,7 +4,7 @@
  * 主要用于连接数据库,并封装了四个常用操作
  * ======================================================================== */
 namespace core;
-
+use extend\Helper;
 class Model extends AR
 {
 	
@@ -189,5 +189,23 @@ class Model extends AR
         $param[':ph0']=$value;
         $this->reset(false);
         return $this->_exec($sql,$param,false);
+    }
+
+    /** ------------------------------------------------------------------
+     * 随机条数的获取
+     * @param int $limit
+     * @param array $where
+     * @param string $select
+     * @param string $table
+     * @return array
+     *---------------------------------------------------------------------*/
+    public function _random($limit=10,$where=[],$select='*',$table=''){
+        if(!$table)
+            $table=$this->table;
+        $counter=$this->select('Max(id) as max,Min(id) as min,Count(*) as count')->from($table)->find(null,true);
+        $limitCount = $counter['max'] - $counter['count'] + $limit;
+        $inArr = Helper::rand_number($counter['min'], $counter['max'], $limitCount,false);
+        $order=implode(',',$inArr);
+        return $this->select($select)->from($table)->in('id',$inArr)->_where($where)->order("field(id,{$order})")->limit($limit)->findAll(true);
     }
 }

@@ -155,7 +155,8 @@ class Router {
         try{
             $ref = (is_array($cb) && isset($cb[1])) ? new \ReflectionMethod($cb[0], $cb[1]) : new \ReflectionFunction($cb);
         }catch (\Exception $e){
-            echo $e->getMessage();
+            //echo $e->getMessage();
+            show_error($e->getMessage());
             return;
         }
         $args = $ref->getParameters();
@@ -318,6 +319,8 @@ class Router {
         $ctrlClass = '\\app\\' . self::$module . '\ctrl\\' . self::$ctrl . 'Ctrl';
         $action = self::$action;
         //$ctrlFile = APP . self::$module.'/ctrl/' . self::$ctrl . 'Ctrl.php';
+
+
         if (!class_exists($ctrlClass)) {
             show_error('" '.$ctrlClass . ' "<br>是一个不存的控制器，请检查链接和路由是否正确！');
         }

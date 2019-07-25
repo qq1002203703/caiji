@@ -85,5 +85,24 @@ class MemberCtrl extends Ctrl
         $this->_display('member/center_comment',$data,false);
     }
 
+    public function all(){
+        $model=app('\core\Model');
+        $currentPage=get('page','int',1);
+        $perPage=42;
+        $data['total']=$model->count([
+            'from'=>'user',
+            'where'=>['status'=>1]
+        ]);
+        if($data['total']>0){
+            $url = url('@member_all@').'?page=(:num)';
+            $data['page']=new Paginator($data['total'],$perPage,$currentPage,$url);
+            $data['data']=$model->select('id,username,score,pid,gid,level,coin,nickname,avatar,signature,balance')->from('user')->eq('status',1)->order('last_login_ip desc,id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
+        }else{
+            $data['comments']=[];
+            $data['page']='';
+        }
+        $data['title']='会员中心';
+        $this->_display('member/center_all',$data,false);
+    }
 
 }

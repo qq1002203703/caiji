@@ -66,17 +66,21 @@ class User extends Model
      * @param $data：已经经过验证的数据
      * @return int:成功添加返回新增的id,失败返回0
      */
-    public function addUser($data){
+    public function addUser($data,$gid=0){
         $data['pid']=$data['pid']??0;
         $id=$this->insert([
             'username'=>$data['username'],
             'email'=>$data['email']??'',
             'phone'=>$data['phone']??'',
             'password'=>password_hash($data['password'], PASSWORD_BCRYPT, array("cost" => 9)),
-            'gid'=>10,
+            'gid'=>($gid>1 ? $gid :10),
             'last_login_time'=>time(),
             'create_time'=>$data['create_time'] ?? time(),
             'avatar'=> $data['avatar'] ?? '',
+            'signature'=>$data['signature']??'',
+            'more'=>$data['more']??'',
+            'birthday'=>$data['birthday'] ?? 0,
+            'city'=>$data['city'] ?? '',
         ]);
         //更新pid、path和level
         if($id){

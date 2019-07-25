@@ -14,6 +14,9 @@
 
 namespace app\portal\model;
 
+use core\Conf;
+use extend\Helper;
+
 class User extends \app\admin\model\User
 {
     public $table='user';
@@ -27,7 +30,59 @@ class User extends \app\admin\model\User
      * @return array|bool
      *---------------------------------------------------------------------*/
     public function getRandomUser($limit,$select='*'){
-        return $this->_sql('SELECT '.$select.' FROM `'.self::$prefix.$this->table.'` WHERE id >= (SELECT floor(RAND() * (SELECT MAX(id) FROM `'.self::$prefix.$this->table.'` where status=1))) and status=1 ORDER BY id LIMIT '.$limit,[],false);
+        return  $this->_random($limit,[['status','eq',1]],$select);
+    }
+
+    public function randomUserEx(&$username){
+        //读取配置
+        $maxUser=Conf::get('max_user','portal');
+        if(!$maxUser){//不设置或为0时，从系统中获取
+            return $this->getOneRandomUser($username);
+        }else{
+            $total=$this->count();
+            if($total<$maxUser){
+                $url=Conf::get('get_user_url','portal');
+                $res=Helper::curl_request($url,$code);
+                if($code===200){
+                    $res=json_decode($res,true);
+                    if(isset($res['data']) && $res['data']){
+                        $username=$res['data']['username'];
+                        $id=$this->getIdByName($username);
+                        if($id >0){
+                            $this->eq('id',$id)->update([
+                                'nickname'=>$res['data']['name'],
+                                'more'=>$res['data']['text'],
+                                'signature'=>$res['data']['signature'],
+                                'birthday'=>$res['data']['birthday'],
+                                'city'=>$res['data']['city'],
+                            ]);
+                            return $id;
+                        }
+                        return $this->addUser([
+                            'username'=>$username,
+                            'nickname'=>$res['data']['name'],
+                            'more'=>$res['data']['text'],
+                            'signature'=>$res['data']['signature'],
+                            'birthday'=>$res['data']['birthday'],
+                            'city'=>$res['data']['city'],
+                            'email'=>time().'@163.com',
+                            'avatar'=>'/uploads/user/'.mt_rand(0,500).'.jpg',
+                            'password'=>'isi123Z&$pp456#'
+                        ]);
+                    }
+                }
+            }
+            return $this->getOneRandomUser($username);
+        }
+    }
+
+    public function getOneRandomUser(&$username){
+        $data=$this->getRandomUser(1,'id,username');
+        if($data){
+            $username=$data['0']['username'];
+            return $data[0]['id'];
+        }
+        return 0;
     }
 
     /** ------------------------------------------------------------------

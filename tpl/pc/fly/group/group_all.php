@@ -13,7 +13,6 @@
             <div class="fly-panel">
                 <div class="layui-breadcrumb p20" lay-separator="&gt;">
                     <a href="/">首页</a>
-                    <?=$bread?>
                     <a href="#">小组大全</a>
                 </div>
                 <?php if($data):?>

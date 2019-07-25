@@ -10,6 +10,7 @@
  * ======================================*/
 
 namespace shell\ctrl;
+use extend\Helper;
 use shell\BaseCommon;
 class Portal extends BaseCommon
 {
@@ -30,6 +31,9 @@ class Portal extends BaseCommon
                 break;
             case 'bilibili':
                 $this->bilibili();
+                break;
+            case 'bilibili2':
+                $this->bilibili2();
                 break;
             default:
                 $this->outPut('请输入正确的任务名，格式: -n taskName'.PHP_EOL,true);
@@ -377,6 +381,13 @@ class Portal extends BaseCommon
 
     protected function keywordLink2(&$content){
         return app('\app\admin\model\KeywordLink')->doLoop($content);
+    }
+
+    public function test(){
+        $model=app('\app\portal\model\User');
+        $a=$model->randomUserEx($username);
+        dump($a);
+        dump($username);
     }
 
 }
