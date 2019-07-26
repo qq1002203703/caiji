@@ -10,10 +10,6 @@
 <div class="user-info f32 color4 p2 bg-color6 m2 radius5">
     {%include@tmp/ad_article%}
     <div class="item mb1">
-        <span class="item-l">金币 : </span>
-        <span class="item-r color3"><?=$user['coin'];?></span>
-    </div>
-    <div class="item mb1">
         <span class="item-l">昵称 : </span>
         <span class="item-r color3"><?=$user['nickname'];?></span>
     </div>
@@ -24,6 +20,10 @@
     <div class="item mb1">
         <span class="item-l">生日 : </span>
         <span class="item-r color3"><?=date('Y-m-d',$user['birthday']);?></span>
+    </div>
+    <div class="item mb1">
+        <span class="item-l">现居 : </span>
+        <span class="item-r color3"><?=$user['city'];?></span>
     </div>
     <div class="item mb1">
         <span class="item-l">注册 : </span>

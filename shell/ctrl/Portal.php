@@ -132,8 +132,8 @@ class Portal extends BaseCommon
        $this->outPut('开始进行bilibili数据定时发布'.PHP_EOL,true);
        $table='caiji_bilibili';
        $where=[['isfabu','eq',0]];
-       $num=mt_rand(1,2);
-       //$num=1;
+       //$num=mt_rand(1,2);
+       $num=1;
        $data=$this->model->from($table)->_where($where)->order('id')->limit($num)->findAll(true);
        foreach ($data as $item){
            $this->outPut('开始处理：id=>'.$item['id'].',-------------'.PHP_EOL);
@@ -148,7 +148,7 @@ class Portal extends BaseCommon
                'seo_title'=>$item['seo_title'],
                'type'=>'group',
                'from_id'=>$item['from_id'],
-               'content'=>$item['content'],
+               //'content'=>$item['content'],
                'videos'=>$item['videos'],
            ];
             //确定pid
@@ -165,6 +165,7 @@ class Portal extends BaseCommon
            $data['uid']=$this->getUserId($item['username']);
            $this->keywordLink2($data['content']);
            $item['comment']=$item['comment']?explode('{%@@@%}',$item['comment']):[];
+           $data['content']=$this->getContentFromComment($item['comment']);
            $data['comments_num']=count($item['comment']);
            $data['create_time']=time()-mt_rand(3600*2,3600*4);
            $data['update_time']=$data['create_time'];
@@ -177,6 +178,20 @@ class Portal extends BaseCommon
            }
        }
    }
+    protected function getContentFromComment($comments){
+        if(is_string($comments))
+            $comments=explode('{%@@@%}',$comments);
+        $result=[];
+        foreach ($comments as $comment){
+            if(!$comment)
+                continue;
+            if(($pos=strpos($comment,'{%##%}'))!==false){
+                $comment=substr($comment,0,$pos);
+            }
+            list(,,$result[])=explode('{%@@%}',$comment);
+        }
+        return implode("\n",$result);
+    }
 
     protected function addTag($oid,$tags,$type,$isPeople){
         return app('\app\admin\model\Tag')->addFromOid($oid,$tags,$type,1,$isPeople);
@@ -216,12 +231,13 @@ class Portal extends BaseCommon
         $model=app('\app\portal\model\User');
         //用户名为空时 取随机用户
         if(!$username){
-            $data=$model->getRandomUser(1,'id,username');
-            if($data){
+            return $model->randomUserEx($username);
+            //$data=$model->getRandomUser(1,'id,username');
+           /* if($data){
                 $username=$data['0']['username'];
                 return $data[0]['id'];
             }
-            return 0;
+            return 0;*/
         }
         return $model->addFromName($username);
     }
@@ -384,10 +400,7 @@ class Portal extends BaseCommon
     }
 
     public function test(){
-        $model=app('\app\portal\model\User');
-        $a=$model->randomUserEx($username);
-        dump($a);
-        dump($username);
+       echo (int)microtime(true).PHP_EOL;
     }
 
 }

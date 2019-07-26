@@ -3,7 +3,7 @@
 <?php $title=$data['seo_title'] ? : $title;?>
 <title><?=$title;?>_<?=$site_name?></title>
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
-<meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.$site_name.'还为你提供'.$title.'视频在线免费下载':$title)?>">
+<meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.\extend\Helper::text_cut($data['content'],200):$title)?>">
 <meta name="mobile-agent" content="format=html5;url=<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
 <link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
 <style>
@@ -24,17 +24,28 @@
                 </div>
                 <?php if($data['videos']):?>
                     <h1 class="video-title"><?=$data['seo_title']?$data['seo_title']:$title?></h1>
-                <div id="yang-video"></div>
-                    <?php if($tags): ?>
+                    <div class="fly-detail-info">
+                    <span class="fly-detail-column">
+                        <?=date('Y-m-d H:i',$data['create_time']);?>&nbsp;&nbsp;作者:<a href="<?=url('@member@',['uid'=>$data['uid']])?>" ><?=$data['username']?></a>
+                    </span>
+                        <span class="fly-list-nums">
+                        <i class="iconfont" title="回复">&#xe60c;</i> <?=$data['comments_num']?>
+                  </span>
+                    </div>
+                    <div id="yang-video"></div>
                     <div class="detail-body photos">
+                        <div class="item"><span>简介：</span>
+                            <div id="jianjie"><?=$data['content']?></div>
+                        </div>
+                    <?php if($tags): ?>
                         <p class="detail-tags">
                             标签 :
                             <?php foreach ($tags as $tag):?>
                                 <a href="<?=url('@tag@',['slug'=>$tag['slug']])?>"><?=$tag['name'];?></a>
                             <?php endforeach;?>
                         </p>
-                    </div>
                     <?php endif;?>
+                    </div>
                 <?php else:?>
                 <h1><?=$title?></h1>
                 <div class="fly-detail-info">
@@ -111,17 +122,24 @@
     var videos=<?=$data['videos'] ? $data['videos']:'{}';?>;
     videos.aid=<?=$data['from_id'];?>;
     layui.config({version: "3.0.1", base: '/static/fly/mods/'}).extend({post: 'post'}).use('post');
-    layui.use(['layer'], function(){
+    layui.use(['layer','shorten'], function(){
         var $=layui.jquery;
+        var iframeResize=function () {
+            $(".yang-iframe").height(($('.video-container').width())/1.58);
+        };
         $(document).ready(function(){
             if(videos.aid>0 && videos.data){
                 $('#yang-video').append('<div class="video-container"><iframe class="yang-iframe" src="https://player.bilibili.com/player.html?cid='+videos.data[0].cid+'&aid='+videos.aid+'&page=1&as_wide=1" width="100%" frameborder="0" allowfullscreen="allowfullscreen"></iframe></div><div class="video-btn"></div>');
                 iframeResize();
             }
+            //显示更多
+            $('#jianjie').shorten({
+                showChars: 200,
+                moreText: ' 展开<i class="layui-icon layui-icon-down"></i>',
+                lessText: ' 收起<i class="layui-icon layui-icon-up"></i>'
+            });
         });
-        var iframeResize=function () {
-            $(".yang-iframe").height(($('.video-container').width())/1.58);
-        }
+
     });
 
 </script>

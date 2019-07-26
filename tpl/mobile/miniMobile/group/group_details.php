@@ -3,7 +3,7 @@
 <?php $title=$data['seo_title'] ? : $title;?>
 <title><?=$title;?>_<?=$site_name?></title>
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
-<meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.$site_name.'还为你提供'.$title.'视频在线免费下载':$title)?>">
+<meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.\extend\Helper::text_cut($data['content'],200):$title)?>">
 <link rel="canonical" href="<?=url('@group@',['id'=>$data['id']],$site_url)?>">
 {%end%}
 {%block@article%}
@@ -16,6 +16,8 @@
     {%include@tmp/ad_article%}
     <?php if($data['videos']):?>
         <div id="yang-video"></div>
+        <div id="read-more" style="overflow: hidden;max-height: 100px;"><?=$data['content'];?></div>
+        <div id="read-more-btn" class="color-primary" data="hide">展开<i class="icon iconfont icon-unfold"></i></div>
     <?php else:?>
     <?=$data['content'];?>
     <?php endif;?>
@@ -39,14 +41,31 @@
 <script type="text/javascript" charset="utf-8">
     var videos=<?=$data['videos'] ? $data['videos']:'{}';?>;
     videos.aid=<?=$data['from_id'];?>;
+    //重设iframe高度
+    var iframeResize=function () {
+        $(".yang-iframe").height(($('.video-container').width())/1.58);
+    };
+    //阅读更多
+    var readMore=function(selector,height){
+        $(selector).click(function () {
+            var _this=$(this);
+            if(_this.attr('data')==='hide'){
+                $("#read-more").css('max-height','none');
+                _this.attr('data','show').html('收起<i class="icon iconfont icon-fold"></i>');
+            }else {
+                $("#read-more").css('max-height',height+'px');
+                _this.attr('data','hide').html('收起<i class="icon iconfont icon-unfold"></i>');
+            }
+        })
+    };
+
     $(document).ready(function(){
         if(videos.aid>0 && videos.data){
             $('#yang-video').append('<div class="video-container"><iframe class="yang-iframe" src="https://www.bilibili.com/blackboard/html5player.html?cid='+videos.data[0].cid+'&aid='+videos.aid+'&page=1&as_wide=1" width="100%" frameborder="0" allowfullscreen="allowfullscreen"></iframe></div><div class="video-btn"></div>');
             iframeResize();
         }
+        readMore("#read-more-btn",100);
     });
-    var iframeResize=function () {
-        $(".yang-iframe").height(($('.video-container').width())/1.58);
-    }
+    
 </script>
 {%end%}

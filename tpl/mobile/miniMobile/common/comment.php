@@ -3,8 +3,13 @@
     <li class="item clearfix mb3" id="comment-<?=$comment['id']?>">
         <div class="item-img w8 fl"><a href="<?=url('@member@',['uid'=>$comment['uid']])?>"><?php echo $comment['avatar'] ? '<img class="w8 h8 radius5" src="'.$tuku.$comment['avatar'].'" alt="'.$comment['username'].'">' : '<img src="'.$tuku.'/uploads/user/default.png" alt="">';?></a></div>
         <div class="w60 pl2 pr1 fl">
-            <div class="item-info"><a class="comment-list-user color-primary f32" href="<?=url('@member@',['uid'=>$comment['uid']])?>" id="user-<?=$comment['id']?>"><?=$comment['username']?></a></div>
-            <div class="item-text color3 f30"  id="content-text-<?=$comment['id']?>"><?=$comment['content']?></div>
+            <div class="item-info">
+                <a class="comment-list-user color-primary f32" href="<?=url('@member@',['uid'=>$comment['uid']])?>" id="user-<?=$comment['id']?>"><?=$comment['username']?></a>
+                <?php if ($comment['is_content']):?><a href="<?=url('@comment@',['id'=>$comment['id']])?>" class="pl1 f32"><i class="icon iconfont icon-dialog"></i></a><?php endif; ?>
+            </div>
+            <div class="item-text color3 f30"  id="content-text-<?=$comment['id']?>">
+                <?=$comment['content']?>
+            </div>
             <div class="item-btn clearfix color4 f28 pt2">
                 <span class="color5"><?=date('Y-m-d H:i',$comment['create_time'])?></span>
                 <span class="fr ml2"><i class="f32 pr1 icon iconfont icon-comment"></i><?=$comment['children'];?></span>

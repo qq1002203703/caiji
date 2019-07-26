@@ -202,7 +202,9 @@ class Model extends AR
     public function _random($limit=10,$where=[],$select='*',$table=''){
         if(!$table)
             $table=$this->table;
-        $counter=$this->select('Max(id) as max,Min(id) as min,Count(*) as count')->from($table)->find(null,true);
+        $counter=$this->select('Max(id) as max,Min(id) as min,Count(*) as count')->from($table)->_where($where)->find(null,true);
+        if($counter['max']<1 || !$counter['min']<1 || !$counter['count']<1)
+            return [];
         $limitCount = $counter['max'] - $counter['count'] + $limit;
         $inArr = Helper::rand_number($counter['min'], $counter['max'], $limitCount,false);
         $order=implode(',',$inArr);

@@ -1,8 +1,8 @@
 {%extend@common/base_portal%}
 {%block@title%}
-<title><?=$title?>_<?=$site_name?></title>
-<meta name="keywords" content="<?=$user['username'];?>">
-<meta name="description" content="<?=$site_name?>的用户[<?=$user['username']?>]的个人主页，<?=$user['username']?>个人资料简介！">
+<title><?=$user['username'];?><?php if($user['nickname']){echo '['.$user['nickname'].']';}?>的个人主页_<?=$site_name?></title>
+<meta name="keywords" content="<?=$user['username'].($user['nickname']?','.$user['nickname']:'');?>">
+<meta name="description" content="用户[<?=$user['username'].($user['nickname']?'/'.$user['nickname']:'')?>]的个人主页，<?=$user['username']?>个人资料简介,<?=\extend\Helper::text_cut($user['more'],200)?>">
 <meta name="mobile-agent" content="format=html5;url=<?=url('@member@',['uid'=>$user['id']],'http://'.$mobile_domain)?>">
 <link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@member@',['uid'=>$user['id']],'http://'.$mobile_domain)?>">
 {%end%}
@@ -14,6 +14,10 @@
         </div>
         <div class="layui-col-md9">
             <div class="fly-panel fly-panel-user" pad20>
+                <div class="detail-body" style="background-color: #eee;padding: 10px;">
+                    <p>个人简介：</p>
+                    <?=$user['more']?>
+                </div>
                 <div class="layui-tab layui-tab-brief" lay-filter="user">
                     <ul class="layui-tab-title" id="LAY_mine">
                         <li class="layui-this">评论</li>
@@ -43,7 +47,7 @@
                                 <?php endforeach;?>
                                 <li><span class="fly-jing layui-icon layui-icon-spread-left"></span><a href="<?=url('@member_article@',['uid'=>$user['id']])?>"> 关于他更多的文章和主题</a></li>
                                 <?php else:?>
-                                <li>这个家伙还没有发布过文章和主题！</li>
+                                <li><p>这个家伙还没有发布过文章和主题！</p></li>
                                 <?php endif;?>
                             </ul>
                         </div>

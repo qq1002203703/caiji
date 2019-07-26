@@ -1,13 +1,19 @@
 {%extend@common/main%}
 {%block@title%}
-<title><?=$title?>_<?=$site_name?></title>
-<meta name="keywords" content="<?=$user['username'];?>">
-<meta name="description" content="<?=$site_name?>的用户[<?=$user['username']?>]的个人主页，<?=$user['username']?>个人资料简介！">
+<title><?=$user['username'];?><?php if($user['nickname']){echo '['.$user['nickname'].']';}?>的个人主页_<?=$site_name?></title>
+<meta name="keywords" content="<?=$user['username'].($user['nickname']?','.$user['nickname']:'');?>">
+<meta name="description" content="用户[<?=$user['username'].($user['nickname']?'/'.$user['nickname']:'')?>]的个人主页，<?=$user['username']?>个人资料简介,<?=\extend\Helper::text_cut($user['more'],200)?>">
 <link rel="canonical" href="<?=url('@member@',['uid'=>$user['id']],$site_url)?>">
 {%end%}
 {%block@article%}
 <div class="yang-space">
     {%include@common/member%}
+    <div class="user-info f32 color4 p2 bg-color6 m2 radius5">
+        <div class="item mb1">
+            <span class="item-l">简介 : </span>
+            <span class="item-r color3"><?=$user['more'];?></span>
+        </div>
+    </div>
     <section class="swiper-container">
         <div class="tabindexList f34 p2">
             <span class="pr2 tab-title color2">评论/回答</span>

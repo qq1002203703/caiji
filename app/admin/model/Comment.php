@@ -56,7 +56,7 @@ class Comment extends Model
 
     public function getSome($where,$limit,$order='',$select='',$single=false){
         if(!$select)
-            $select='c.id,c.username,u.avatar,content,c.create_time,children,c.pid,oid,table_name,uid,likes,dislikes,recommended';
+            $select='c.id,c.username,u.avatar,content,c.create_time,children,c.pid,oid,table_name,uid,likes,dislikes,recommended,is_content';
         if(!$order)
             $order='create_time desc,id desc';
 

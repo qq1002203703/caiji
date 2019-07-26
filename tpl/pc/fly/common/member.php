@@ -24,6 +24,10 @@
         <span class="item-r"><?=date('Y-m-d',$user['birthday']);?></span>
     </div>
     <div class="item">
+        <span class="item-l">现居 : </span>
+        <span class="item-r"><?=$user['city']?></span>
+    </div>
+    <div class="item">
         <span class="item-l">注册 : </span>
         <span class="item-r"><?=date('Y-m-d',$user['create_time']);?></span>
     </div>

@@ -11,7 +11,7 @@
                 <a class="comment-list-user" href="<?=url('@member@',['uid'=>$comment['uid']])?>" id="user-<?=$comment['id']?>"><?=$comment['username']?></a>
                 <span class="comment-list-date"><?=date('Y-m-d H:i',$comment['create_time'])?></span>
             </div>
-            <div class="comment-list-text" id="content-text-<?=$comment['id']?>"><?=$comment['content']?></div>
+            <div class="comment-list-text" id="content-text-<?=$comment['id']?>"><?=$comment['content'];?><?php if($comment['is_content']):?><a href="<?=url('@comment@',['id'=>$comment['id']])?>"><i class="iconfont icon-lianjie"></i></a><?php endif;?></div>
             <div class="comment-list-children">
                 <?php if($comment['children'] >0 ):
                     if(!isset($cmModel))

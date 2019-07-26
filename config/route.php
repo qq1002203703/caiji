@@ -14,6 +14,8 @@ router()
     ->get('group_list','glist/:slug','portal/post/group_list') //小组分类
     ->get('group_all','group/all','portal/post/group_all') //小组所有分类
 
+    ->get('comment','comment/:id:d.html','portal/post/comment','.html')//评论
+
     ->get('tag','topic/:slug','portal/post/tag')//标签
     ->get('tag_all','topic-all/','portal/post/tag_all')
     //->get('bbs_post','bbs/post/:id:d.html','bbs/post/show','.html')

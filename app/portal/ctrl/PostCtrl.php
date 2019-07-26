@@ -141,7 +141,6 @@ class PostCtrl extends Ctrl
 
         $where=[['type','eq',$type],['status','eq',1],['category_id','eq',$category['id']]];
         $total = $postModel->count(['where'=>$where]);
-        dump($postModel->getSql());
         if($total>0)
             $data=$postModel->search($where,[($currentPage-1)*$perPage,$perPage],'create_time desc,id desc');
         else
@@ -409,5 +408,20 @@ class PostCtrl extends Ctrl
             //'page'=>$page,
         ];
         $this->_display('portal/tag_all',$asin,false);
+    }
+
+    public function comment($id){
+        $model=app('\app\admin\model\Comment');
+        $data=[];
+        $data['data']=$model->eq('id',$id)->find(null,true);
+        if(!$data['data'])
+            show_error('不存在的comment id');
+        if(!$data['data']['is_content'])
+            show_error('此评论不能作独立文章');
+        $data['post']=$model->select('id,title,content,uid,thumb,status,views,likes,type,comments_num,create_time')->from($data['data']['table_name'])->eq('id',$data['data']['oid'])->find(null,true);
+        $data['title']=Helper::text_cut($data['data']['content'],28);
+        $data['comments']=$model->select('id,create_time,uid,username,content,likes,dislikes,status')->eq('pid',$id)->order('create_time')->limit(40)->findAll(true);
+        //dump($data);exit();
+        $this->_display('portal/comment',$data,false);
     }
 }

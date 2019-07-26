@@ -81,7 +81,35 @@ class User extends Model
             'more'=>$data['more']??'',
             'birthday'=>$data['birthday'] ?? 0,
             'city'=>$data['city'] ?? '',
+            'nickname'=>$data['nickname']??'',
         ]);
+        //更新pid、path和level
+        if($id){
+            if($data['pid'] >0){
+                $parent=$this->getById($data['pid'] ,'path,level');
+                if(!$parent){
+                    $data['pid']=0;
+                    $parent=['path'=>'','level'=>0];
+                }
+            }else{
+                $parent=['path'=>'','level'=>0];
+            }
+            $update['path']=$this->getPath($id,$data['pid'],$parent['path']);
+            $update['level']=$this->getLevel($data['pid'],$parent['level']);
+            $update['pid']=$data['pid'];
+            $this->eq('id',$id)->update($update);
+            return $id;
+        }
+        return 0;
+    }
+    public function addUserEx($data){
+        $data=$this->_filterData($data);
+        $data['pid']=$data['pid']??0;
+        $data['password']=password_hash($data['password'], PASSWORD_BCRYPT, array("cost" => 9));
+        $data['gid']=$data['gid']??10;
+        $data['last_login_time']=time();
+        $data['create_time']=$data['create_time'] ?? time();
+        $id=$this->insert($data);
         //更新pid、path和level
         if($id){
             if($data['pid'] >0){

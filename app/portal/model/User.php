@@ -41,7 +41,7 @@ class User extends \app\admin\model\User
         }else{
             $total=$this->count();
             if($total<$maxUser){
-                $url=Conf::get('get_user_url','portal');
+                $url=Conf::get('get_user_url','portal').'&_t='.((int)microtime(true));
                 $res=Helper::curl_request($url,$code);
                 if($code===200){
                     $res=json_decode($res,true);
@@ -58,7 +58,7 @@ class User extends \app\admin\model\User
                             ]);
                             return $id;
                         }
-                        return $this->addUser([
+                        return $this->addUserEx([
                             'username'=>$username,
                             'nickname'=>$res['data']['name'],
                             'more'=>$res['data']['text'],
@@ -67,7 +67,9 @@ class User extends \app\admin\model\User
                             'city'=>$res['data']['city'],
                             'email'=>time().'@163.com',
                             'avatar'=>'/uploads/user/'.mt_rand(0,500).'.jpg',
-                            'password'=>'isi123Z&$pp456#'
+                            'password'=>'isi123Z&$pp456#',
+                            'sex'=>mt_rand(0,2),
+                            'coin'=>mt_rand(187,6888),
                         ]);
                     }
                 }
