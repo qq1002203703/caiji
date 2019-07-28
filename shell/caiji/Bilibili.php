@@ -557,7 +557,7 @@ class Bilibili extends Spider {
         echo '开始发布内容……'.PHP_EOL;
         $this->fabu_content($this->options['fields_filter']['content']);
         echo '开始发布评论……'.PHP_EOL;
-        $this->fabu_comment($this->options['fields_filter']['comment']);
+        $this->fabu_comment2($this->options['fields_filter']['comment']);
     }
 
     public function fabu_content($fields_filter=''){
@@ -611,7 +611,7 @@ class Bilibili extends Spider {
         });
         //exit();
     }
-    //评论发布
+    //评论发布-全部发完
     public function fabu_comment($fields_filter=''){
         $table='caiji_bilibili_comment';
         $where=[['caiji_name','eq',$this->options['app_name']],['isfabu','eq',0],['length','gt',7]];
@@ -651,8 +651,8 @@ class Bilibili extends Spider {
             if($ret==='发布成功'){
                 $this->model->from($table)->eq('id',$id)->update(['isfabu'=>1]);
                 echo '发布成功';
-                if($this->counter($item['fid']))
-                    return 'break';
+                //if($this->counter($item['fid']))
+                    //return 'break';
             }else
                 exit('发布失败：'.$ret);
             //exit();
@@ -660,6 +660,7 @@ class Bilibili extends Spider {
             return '';
         });
     }
+    //评论发布 只发一部分
     public function fabu_comment2($fields_filter=''){
         if(!$this->options)
             $this->setOptions(Conf::all($this->appName,false,'config/bilibili/'));
@@ -690,7 +691,7 @@ class Bilibili extends Spider {
                 'where'=>[['fid','eq',$data['fid']],['isfabu','eq',1]]
             ]);
             echo ',已经发布过=>'.$publishCount;
-            $max=mt_rand(21,45);
+            $max=mt_rand(35,50);
             echo ',max=>'.$max;
             if($publishCount>=$max){
                 $this->model->from($table)->eq('fid',$data['fid'])->update(['isfabu'=>1]);
@@ -754,7 +755,7 @@ class Bilibili extends Spider {
      * @return string
      *---------------------------------------------------------------------*/
     protected function getCommentFabu($fid,&$in){
-        $data=$this->model->from('caiji_bilibili_comment')->_where([['fid','eq',$fid],['isfabu','eq',0]])->order('length desc,children desc,id')->limit(mt_rand(8,12))->findAll(true);
+        $data=$this->model->from('caiji_bilibili_comment')->_where([['fid','eq',$fid],['isfabu','eq',0]])->order('children desc,length desc,id')->limit(6,8)->findAll(true);
         $in=[];
         if($data){
             $str_arr=[];

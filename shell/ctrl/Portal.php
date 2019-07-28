@@ -399,8 +399,166 @@ class Portal extends BaseCommon
         return app('\app\admin\model\KeywordLink')->doLoop($content);
     }
 
-    public function test(){
-       echo (int)microtime(true).PHP_EOL;
+    public function dodo(){
+        $table='caiji_renren_name';
+        $where=[['isdone','eq',0]];
+        $total=$this->model->count([
+            'from'=>$table,
+            'where'=>$where
+        ]);
+        $this->doLoop($total,function ($perPage)use ($table,$where){
+            return $this->model->select('*')->from($table)->_where($where)->limit($perPage)->findAll(true);
+        },function ($item)use ($table){
+            echo '开始处理：id=>'.$item['id'].'---------------'.PHP_EOL;
+            $update=[ 'isdone'=>1];
+            if($item['text']){
+                echo '  处理text=>';
+                $update['text']=$this->filter($item['text']);
+                if($update['text'] !==$item['text']){
+                    if ($update['text']=='')
+                        $update['md5']='';
+                    else{
+                        if(mb_strlen($update['text'])<40){
+                            $update['text']='';
+                            $update['md5']='';
+                        }else
+                            $update['md5']=md5($update['text']);
+                    }
+
+                }else
+                    unset($update['text']);
+                echo '---'.PHP_EOL;
+            }
+            if($item['signature']){
+                echo '  处理signature=>';
+                $update['signature']=$this->filter($item['signature']);
+                if($update['signature'] !==$item['signature']){
+                    if ($update['signature']=='')
+                        $update['sign_md5']='';
+                    else{
+                        if(mb_strlen($update['signature'])<20){
+                            $update['signature']='';
+                            $update['sign_md5']='';
+                        }else
+                            $update['sign_md5']=md5($update['signature']);
+                    }
+                }else
+                    unset($update['signature']);
+                echo '---'.PHP_EOL;
+            }
+            if($this->model->from($table)->eq('id',$item['id'])->update($update))
+                echo '  成功：更新'.PHP_EOL;
+            else{
+                echo '  失败：更新'.PHP_EOL;
+                exit();
+            }
+            //msleep(20000);
+        });
+    }
+
+    public function dodo2(){
+        $table='caiji_renren_name';
+        $where=[['isdone','eq',0]];
+        $total=$this->model->count([
+            'from'=>$table,
+            'where'=>$where
+        ]);
+        $this->doLoop($total,function ($perPage)use ($table,$where){
+            return $this->model->select('*')->from($table)->_where($where)->limit($perPage)->findAll(true);
+        },function ($item)use ($table){
+            echo '开始处理：id=>'.$item['id'].'---------------'.PHP_EOL;
+            $update=[ 'isdone'=>1];
+            if($item['text']){
+                echo '  处理text=>';
+                $update['text']=$this->filter2($item['text'],false);
+                if($update['text'] !==$item['text']){
+                    if ($update['text']=='')
+                        $update['md5']='';
+                    else{
+                        if(mb_strlen(strip_tags($update['text']))<40){
+                            $update['text']='';
+                            $update['md5']='';
+                        }else
+                            $update['md5']=md5($update['text']);
+                    }
+                }else
+                    unset($update['text']);
+                echo '---'.PHP_EOL;
+            }
+            if($item['signature']){
+                echo '  处理signature=>';
+                $update['signature']=$this->filter2($item['signature']);
+                if($update['signature'] !==$item['signature']){
+                    if ($update['signature']=='')
+                        $update['sign_md5']='';
+                    else{
+                        if(mb_strlen($update['signature'])<20){
+                            $update['signature']='';
+                            $update['sign_md5']='';
+                        }else
+                            $update['sign_md5']=md5($update['signature']);
+                    }
+                }else
+                    unset($update['signature']);
+                echo '---'.PHP_EOL;
+            }
+            if($this->model->from($table)->eq('id',$item['id'])->update($update))
+                echo '  成功：更新'.PHP_EOL;
+            else{
+                echo '  失败：更新'.PHP_EOL;
+                exit();
+            }
+            //msleep(20000);
+        });
+    }
+
+    protected function filter2($str,$strip=true){
+        if($strip)
+            $str=strip_tags($str);
+        else
+            $str=strip_tags($str,'<br>');
+        return trim(preg_replace(['%[\r\n\t]+%','/&nbsp;/','/\s{2,}/'],['',' ',' '],$str));
+    }
+
+    protected function filter($str){
+        if(strpos($str,'老男孩')!==false){
+            return '';
+        }
+        if(strpos($str,'{%|||%}')!==false){
+            $arr=explode('{%|||%}',$str);
+            echo '多条bili评论,';
+            $count=count($arr);
+            $str='';
+            for ($i=0;$i<$count;$i++){
+                if($i==0){
+                    $str.=$this->filterBili($arr[$i]);
+                }else
+                    $str.='<br>'.$this->filterBili($arr[$i]);
+            }
+        }elseif(strpos($str,'{%||%}')!==false){
+            $str=$this->filterBili($str);
+        }
+        $str=str_replace(['电影','这部片'],['视频','这个视频'],$str);
+        $str=preg_replace([
+            '%回复 @.+?:%',
+            '/\[.*?\]/',
+            '%(！|。|，|？|：|；|“|”|《|》|（|）|—|、){2,}%',
+            '/[,.\\,}#@%&*!()_\-~`|$\/?]{2,}/',
+        ],[
+            '',
+            '',
+            ';',
+            '.'
+        ],$str);
+        return $str;
+    }
+
+    protected function filterBili($str){
+        if(!$str)
+            return '';
+        echo 'bili子评论,';
+        list(,,$content)=explode('{%||%}',$str);
+        return $content;
     }
 
 }

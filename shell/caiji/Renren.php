@@ -219,8 +219,8 @@ class Renren extends Spider
      *---------------------------------------------------------------------*/
     public function qianming(){
         $this->http_init();
-        for ($i=1;$i<160;$i++){
-            $url='http://www.qqgexingqianming.com/jingdian/'.$i.'.htm';
+        for ($i=1;$i<=189;$i++){
+            $url='http://www.qqgexingqianming.com/gaoxiao/'.$i.'.htm';
             echo '开始采集第'.$i.'页-----------'.PHP_EOL;
             $res=$this->client->http($url);
             if($res===false){
@@ -257,7 +257,7 @@ class Renren extends Spider
             echo '  重复的signature：'.$signature.'----------- '.PHP_EOL;
             return true;
         }
-        $tmp=$this->model->select('id')->from('caiji_renren_name')->eq('sign_md5','')->find(null,true);
+        $tmp=$this->model->select('id')->from('caiji_renren_name')->eq('sign_md5','')->order('id')->find(null,true);
         if(!$tmp){
             exit('  没有需要添加signature的项了'.PHP_EOL);
         }
@@ -272,8 +272,21 @@ class Renren extends Spider
             false;
     }
 
-    protected function filterSign($text){
-        return trim(strip_tags($text));
+    protected function filterSign($str){
+        $str=strip_tags($str);
+        return trim(preg_replace([
+            '%(！|。|，|？|：|；|“|”|《|》|（|）|—|、){2,}%',
+            '/[,.\\,}#@%&*!()_\-~`|$\/?]{2,}/',
+            '%[\r\n\t]+%',
+            '/&nbsp;/',
+            '/\s{2,}/'
+        ],[
+            ';',
+            '.',
+            '',
+            ' ',
+            ' '
+        ],$str));
     }
     protected function checkSign($text){
         return (mb_strlen($text)>20);
@@ -322,7 +335,7 @@ class Renren extends Spider
         }
     }
 
-    //人的出生日期，居住地，
+    //更多资料 city，生日，
     public function more(){
         $table='caiji_renren_name';
         $where=[['isdo','eq',0]];
@@ -364,8 +377,8 @@ class Renren extends Spider
             $i++;
         }
     }
-
-    public function dodo2(){
+    //用bili评论作signature或text
+    public function use_bili(){
         $table='caiji_bilibili_comment';
         $where=[['status','eq',1]];
         if(isset($this->startId) && $this->startId>0)
@@ -387,7 +400,8 @@ class Renren extends Spider
                 if(!$this->saveToText($item['content']))
                     $isFalse=true;
             }
-            if(!$this->commentHandle($item['more']))
+            //子评论
+            if(!$this->biliCommentChildrenHandle($item['more']))
                 $isFalse=true;
             if($isFalse)
                 exit('  入库出错'.PHP_EOL);
@@ -398,22 +412,46 @@ class Renren extends Spider
             //msleep(2000);
         });
     }
-    protected function commentHandle($comment){
+    //解析bili每条评论
+    protected function biliCommentItemParse($comment){
+        if(!$comment)
+            return '';
+        //echo 'bili子评论,';
+        list(,,$comment)=explode('{%||%}',$comment);
+        return $comment;
+    }
+
+    //解析bili1条或多条评论：多条评论会合并在一起
+    protected function biliCommentParse(&$comment){
+        if(strpos($comment,'{%|||%}')!==false){
+            $arr=explode('{%|||%}',$comment);
+            //echo '多条bili评论,';
+            $count=count($arr);
+            $comment='';
+            for ($i=0;$i<$count;$i++){
+                if($i==0){
+                    $comment.=$this->biliCommentItemParse($arr[$i]);
+                }else
+                    $comment.='<br>'.$this->biliCommentItemParse($arr[$i]);
+            }
+        }elseif(strpos($comment,'{%||%}')!==false){
+            $comment=$this->biliCommentItemParse($comment);
+        }
+        $comment=$this->bilibiliFilter($comment);
+    }
+    //bili子评论处理器
+    protected function biliCommentChildrenHandle($comment){
         if(!$comment)
             return true;
-        $arr=explode('{%|||%}',$comment);
+        $this->biliCommentParse($comment);
+        $length=mb_strlen($comment);
         $isFalse=false;
-        foreach ($arr as $item){
-            list(,,$content)=explode('{%||%}',$item);
-            $content=$this->bilibiliFilter($content);
-            $content2=strip_tags($content);
-            $length=mb_strlen($content2);
-            if($length>=30 and $length<60){
-                if(!$this->saveSign($content2))
-                    $isFalse=true;
-            }elseif($length>=60)
-                if(!$this->saveToText($comment))
-                    $isFalse=true;
+        if($length>=30 and $length<60){
+            if(!$this->saveSign($comment))
+                $isFalse=true;
+        }elseif($length>=60){
+            if(!$this->saveToText($comment))
+                $isFalse=true;
         }
         return $isFalse==false;
     }
@@ -440,28 +478,21 @@ class Renren extends Spider
     }
 
     protected function bilibiliFilter($str){
-        return '<p>' . preg_replace([
-                '%https?://[-A-Za-z0-9+&@#/\%?=~_|!:,.;]+[-A-Za-z0-9+&@#/\%=~_|]%',
-                '%[0-9a-zA-Z.]+\.(com|net|cn|org|cc|us|vip|club|xyz|me|io|wang|win)%',
-                '/bili/i',
-                '/bilibili/i',
-                '/[bB]\s*站/',
-                '/\n+/',
-                '/\s{2,}/',
-                '/up主/i',
-                '/\[.*?\]/',
-                '%回复 @.+?:%'
-            ],[
-                '',
-                '',
-                '社区',
-                '社区',
-                '社区',
-                '<br>',
-                ' ',
-                '楼主',
-                '',
-                ''
-            ],$str). '</p>';
+        return preg_replace([
+            '%回复 @.+?:%',
+            '/\[.*?\]/',
+            '%(！|。|，|？|：|；|“|”|《|》|（|）|—|、){2,}%',
+            '/[,.\\,}#@%&*!()_\-~`|$\/?]{2,}/',
+            '/[bB]\s*站/',
+            '/[\r\n\t]+/'
+        ],[
+            '',
+            '',
+            ';',
+            '.',
+            '社区',
+            ''
+        ],$str);
     }
+
 }

@@ -95,8 +95,8 @@ class MemberCtrl extends Ctrl
         ]);
         if($data['total']>0){
             $url = url('@member_all@').'?page=(:num)';
-            $data['page']=new Paginator($data['total'],$perPage,$currentPage,$url);
-            $data['data']=$model->select('id,username,score,pid,gid,level,coin,nickname,avatar,signature,balance')->from('user')->eq('status',1)->order('last_login_ip desc,id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
+            $data['page']=(string)new Paginator($data['total'],$perPage,$currentPage,$url);
+            $data['data']=$model->select('id,username,score,gid,level,coin,nickname,avatar,signature,balance')->from('user')->eq('status',1)->order('last_login_ip desc,id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
         }else{
             $data['comments']=[];
             $data['page']='';
