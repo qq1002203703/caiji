@@ -1,6 +1,5 @@
 <div class="f28 t-c color4 mb2">
-    Copyright © 2008-<?=date('Y');?> <?=$site_name?><br>
-    <span class="beian"><a class="color4" target="_blank" href="http://beian.miit.gov.cn" rel="nofollow">粤ICP备18096630号-1</a> </span>
+    Copyright © 2008-<?=date('Y');?> <a href="/"><?=$site_name?></a><br>
 </div>
 </div><!--//end wrap-->
 <!-- 返回顶部 -->

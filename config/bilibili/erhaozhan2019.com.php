@@ -8,4 +8,9 @@ return [
     //发布
     'title_text'=>['手把手来教你','每天进步一点点','一起来学习吧','实践是最好的学习方法'],
     'fields_filter'=>['content'=>'','comment'=>''],
+    //定时
+    'crontab_category_id_max'=>14,
+    'crontab_category_id_min'=>2,
+    'crontab_num_max'=>3,
+    'crontab_num_min'=>1
 ];

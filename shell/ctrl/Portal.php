@@ -10,15 +10,16 @@
  * ======================================*/
 
 namespace shell\ctrl;
-use extend\Helper;
+use core\Conf;
 use shell\BaseCommon;
 class Portal extends BaseCommon
 {
     protected $fileBodyName='crontab';
     protected $path='cache/shell/ctrl/';
     public $taskName='';
+    public $appName='';
     protected function _init(){
-        $this->_setCommandOptions(['-n'=>['taskName']],$this->param);
+        $this->_setCommandOptions(['-t'=>['taskName'],'-n'=>['appName']],$this->param);
     }
 
     public function crontab(){
@@ -32,11 +33,8 @@ class Portal extends BaseCommon
             case 'bilibili':
                 $this->bilibili();
                 break;
-            case 'bilibili2':
-                $this->bilibili2();
-                break;
             default:
-                $this->outPut('请输入正确的任务名，格式: -n taskName'.PHP_EOL,true);
+                $this->outPut('请输入正确的任务名，格式: -t taskName'.PHP_EOL,true);
         }
     }
     //知乎答案定时发布
@@ -132,8 +130,9 @@ class Portal extends BaseCommon
        $this->outPut('开始进行bilibili数据定时发布'.PHP_EOL,true);
        $table='caiji_bilibili';
        $where=[['isfabu','eq',0]];
+       $config=Conf::all($this->appName,false,'config/bilibili/');
        //$num=mt_rand(1,2);
-       $num=1;
+       $num=mt_rand($config['crontab_num_min'],$config['crontab_num_max']);
        $data=$this->model->from($table)->_where($where)->order('id')->limit($num)->findAll(true);
        foreach ($data as $item){
            $this->outPut('开始处理：id=>'.$item['id'].',-------------'.PHP_EOL);
@@ -160,7 +159,7 @@ class Portal extends BaseCommon
                }
                 $data['pid']=$parent['id'];
            }
-           $data['category_id']=mt_rand(2,14);
+           $data['category_id']=mt_rand($config['crontab_category_id_min'],$config['crontab_category_id_max']);
            $item['username']='';
            $data['uid']=$this->getUserId($item['username']);
            $this->keywordLink2($data['content']);
@@ -177,18 +176,23 @@ class Portal extends BaseCommon
                $this->updateCateNum($data['category_id'],'portal_post');
            }
        }
+       Conf::clear($this->appName,null,'config/bilibili/');
    }
     protected function getContentFromComment($comments){
         if(is_string($comments))
             $comments=explode('{%@@@%}',$comments);
         $result=[];
+        $i=0;
         foreach ($comments as $comment){
             if(!$comment)
                 continue;
+            if($i>7)
+                break;
             if(($pos=strpos($comment,'{%##%}'))!==false){
                 $comment=substr($comment,0,$pos);
             }
             list(,,$result[])=explode('{%@@%}',$comment);
+            $i++;
         }
         return implode("\n",$result);
     }
@@ -360,8 +364,8 @@ class Portal extends BaseCommon
             $in['oid']=$oid;
             $id=$this->model->from('comment')->insert($in);
             if(!$id){
-                $this->outPut(' 插入comment表失败!'.PHP_EOL);
-                $this->outPut(' 最后的sql:'.$this->model->getSql().PHP_EOL);
+                $this->outPut(' 插入comment表失败!'.PHP_EOL,true);
+                $this->outPut(' 最后的sql:'.$this->model->getSql().PHP_EOL,true);
                 dump($data);
                 exit();
             }
