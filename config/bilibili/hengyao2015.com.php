@@ -1,0 +1,20 @@
+<?php
+return [
+    'app_name'=>'hengyao2015.com',
+    'app_keywords'=>['恒耀平台','恒耀娱乐'],
+    'search_type'=>'video',
+    'search_keyword'=>'吃货',
+    'title_keywords'=>['视频','视觉','xx0oo','恒耀平台','恒耀娱乐','恒耀'],
+    //评论
+    'comment_max'=>30,
+    'comment_min'=>0,
+    //发布
+    'title_text'=>['快来看看','欣赏一下','流口水了','会忍不住想吃'],
+    'fields_filter'=>['content'=>'','comment'=>''],
+    //定时
+    'crontab_category_id_max'=>12,
+    'crontab_category_id_min'=>1,
+    'crontab_num_max'=>1,
+    'crontab_num_min'=>1,
+    'crontab_comment'=>10,
+];

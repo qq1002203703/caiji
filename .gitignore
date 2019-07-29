@@ -13,7 +13,7 @@ vendor/
 douban/
 data/
 cache/
-config/*
+#config/*
 sql/
 composer.lock
 Authentication
@@ -25,8 +25,8 @@ public/uploads/
 public/do.php
 public/test.php
 #tpl
-tpl/pc/fly/tmp/
-tpl/mobile/miniMobile/tmp/
+#tpl/pc/fly/tmp/
+#tpl/mobile/miniMobile/tmp/
 #pic
 !public/uploads/images/no.gif
 !public/uploads/images/nopic.gif
