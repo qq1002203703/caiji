@@ -203,7 +203,7 @@ class Model extends AR
         if(!$table)
             $table=$this->table;
         $counter=$this->select('Max(id) as max,Min(id) as min,Count(*) as count')->from($table)->_where($where)->find(null,true);
-        if($counter['max']<1 || !$counter['min']<1 || !$counter['count']<1)
+        if($counter['max']<1 || $counter['min']<1 || $counter['count']<1)
             return [];
         $limitCount = $counter['max'] - $counter['count'] + $limit;
         $inArr = Helper::rand_number($counter['min'], $counter['max'], $limitCount,false);

@@ -14,6 +14,6 @@
      'index_tag'=>'',
      'tag_all_name'=>'网站建设',
      'groupList' =>[1=>'管理员',2=>'管理员',3=>'管理员',4=>'管理员',10=>'普通会员',11=>'日费会员',12=>'月费会员',13=>'年费会员',14=>'永久会员'],
-     'max_user'=>2000,
-     'get_user_url'=>'http://img.iweixinqun.cn/api/data/user?pwd=Djidksl$$EER4ds58^)UUsshcmO&rn=1'
+     'max_user'=>10,
+     'get_user_url'=>'http://img.iweixinqun.cn/api/data/user?pwd=Djidksl$$EER4ds58^)UUsshcmO'
 );

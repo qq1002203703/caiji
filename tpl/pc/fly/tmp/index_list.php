@@ -79,7 +79,6 @@
                  <?php if (isset($comments) && $comments):foreach ($comments as $item): if(!$item['oid']) continue;?>
                      <li>
                          <p class="home-dacontent"><a class="green" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a>说:<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>"><?=\extend\Helper::text_cut($item['content'],200);?></a><?php if($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>"><i class="iconfont icon-lianjie"></i></a><?php endif;?></p>
-
                      </li>
                  <?php endforeach;endif;?>
              </ul>
