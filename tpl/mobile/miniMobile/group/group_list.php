@@ -31,7 +31,7 @@
         <?php  foreach ($data as $article): ?>
             <li class="item w75 h10 pl2 pr2 mb2 pb1">
                 <div class="item-l w9">
-                    <a href="#"><img src="<?=($article['avatar']? $tuku.$article['avatar']:$tuku.'/uploads/user/default.png')?>" alt="<?=$article['username']?>"></a>
+                    <a href="<?=url('@member@',['uid'=>$article['uid']])?>"><img src="<?=($article['avatar']? $tuku.$article['avatar']:$tuku.'/uploads/user/default.png')?>" alt="<?=$article['username']?>"></a>
                 </div>
                 <div class="item-r w57 ml1">
                     <div class="title color3 f32">

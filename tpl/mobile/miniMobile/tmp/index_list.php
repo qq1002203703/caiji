@@ -25,15 +25,37 @@
     <?php endforeach;?>
 </ul>
 <?php endif;?>
+<?php if (isset($groupPost) && $groupPost):?>
+    <ul class="yang-list2 mt2 color3 p2">
+        <h2 class="yang-title-border f32 pl2 mb2">最新帖子</h2>
+        <?php  foreach ($groupPost as $article): ?>
+            <li class="item w75 h10 pl2 pr2 mb2 pb1">
+                <div class="item-l w9">
+                    <a href="<?=url('@member@',['uid'=>$article['uid']])?>"><img src="<?=($article['avatar']? $tuku.$article['avatar']:$tuku.'/uploads/user/default.png')?>" alt="<?=$article['username']?>"></a>
+                </div>
+                <div class="item-r w57 ml1">
+                    <div class="title color3 f32">
+                        <a href="<?=url('@group@',['id'=>$article['id']])?>"><?=$article['title']?></a>
+                    </div>
+                    <div class="sub color4 f28">
+                        <span class="dib"><?=date('Y-m-d H:i',$article['create_time'])?></span>
+                        <i class="icon iconfont icon-comment dib pr1 pl1"></i>
+                        <span class="dib"><?=$article['comments_num']?></span>
+                    </div>
+                </div>
+            </li>
+        <?php endforeach;?>
+    </ul>
+<?php endif;?>
 <?php if ($comments):?>
 <ul class="home-jieda p2 color3 f30">
-    <h2 class="yang-title-border f32 pl1 mb1">最新评论</h2>
+    <h2 class="yang-title-border f32 pl2 mb2">最新评论</h2>
     <?php foreach ($comments as $item): if(!$item['oid']) continue; ?>
         <li>
-            <p><a class="color-primary" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a> 在【<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>"><?=$item['title']?></a>】中回答：</p>
-            <div class="p2 bg-color6 radius5 mt2 mb2 mr2">
-                <p><?=\extend\Helper::text_cut($item['content'],200);?><?php if ($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>" class="pl1 f32"><i class="icon iconfont icon-comment"></i></a><?php endif;?></p>
-            </div>
+            <p class="p2 bg-color6 radius5 mt2 mb2 mr2"><a class="color-primary" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a> 说:<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>">
+                    <?=\extend\Helper::text_cut($item['content'],200);?>
+                </a><?php if ($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>" class="pl1 f32"><i class="icon iconfont icon-comment"></i></a><?php endif;?></p>
+
         </li>
     <?php endforeach;?>
 </ul>

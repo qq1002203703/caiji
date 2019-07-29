@@ -1,6 +1,6 @@
 <?php if($groups):?>
     <ul class="list-movie pl20">
-        <h2 class="title">热门小组</h2>
+        <h2 class="title common-title">热门小组</h2>
         <?php foreach ($groups as $item):?>
             <li class="item mr15" style="width: 170px;margin-bottom: 18px;">
                 <a class="link" href="<?=url('@group_list@',['slug'=>$item['slug']])?>" title="<?=$item['name'];?>">
@@ -49,19 +49,18 @@
     </ul>
 <?php endif;?>
 
- <div class="fly-panel fly-panel-user" pad20>
+ <div class="fly-panel fly-panel-user">
      <div class="layui-row layui-col-space15">
          <div class="layui-col-md6">
              <ul class="fly-list pl20">
-                 <h2 class="common-title layui-bg-green">最新帖子</h2>
+                 <h2 class="common-title layui-bg-gray">最新帖子</h2>
                  <?php if(isset($groupPost) && $groupPost):foreach ($groupPost as $item):?>
                      <li>
                          <a href="<?=url('@member@',['uid'=>$item['uid']])?>" class="fly-avatar">
                              <img src="<?=$tuku.($item['avatar']? :'/uploads/user/default.png')?>" alt="<?=$item['username']?>">
                          </a>
-                         <div class="fly-list-title">
-                             <a href="<?=url('@group_list@',['slug'=>$item['category_slug']])?>" class="layui-badge"><?=$item['category_name']?></a>
-                             <a href="<?=url('@group@',['id'=>$item['id']])?>"><?=$item['title']?></a>
+                         <div class="fly-list-title yang-one">
+                             <a href="<?=url('@group_list@',['slug'=>$item['category_slug']])?>" class="layui-badge layui-bg-green"><?=$item['category_name']?></a>&nbsp;<a href="<?=url('@group@',['id'=>$item['id']])?>"><?=$item['title']?></a>
                          </div>
                          <div class="fly-list-info">
                              <a href="<?=url('@member@',['uid'=>$item['uid']])?>"><cite><?=$item['username']?></cite></a>
@@ -75,11 +74,11 @@
              </ul>
          </div>
          <div class="layui-col-md6">
-             <ul class="home-jieda">
-                 <h2 class="common-title layui-bg-green">最新评论</h2>
+             <ul class="home-jieda pr20">
+                 <h2 class="common-title  layui-bg-gray">最新评论</h2>
                  <?php if (isset($comments) && $comments):foreach ($comments as $item): if(!$item['oid']) continue;?>
                      <li>
-                         <p><a class="green" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a>说:<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>" target="_blank"><?=\extend\Helper::text_cut($item['content'],200);?></a><?php if($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>"><i class="iconfont icon-lianjie"></i></a><?php endif;?></p>
+                         <p class="home-dacontent"><a class="green" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a>说:<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>"><?=\extend\Helper::text_cut($item['content'],200);?></a><?php if($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>"><i class="iconfont icon-lianjie"></i></a><?php endif;?></p>
 
                      </li>
                  <?php endforeach;endif;?>

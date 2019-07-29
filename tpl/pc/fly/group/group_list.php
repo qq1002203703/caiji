@@ -45,14 +45,14 @@
                         <ul class="fly-list">
                             <?php foreach ($data as $item):?>
                                 <li>
-                                    <a href="javascript:;" class="fly-avatar">
+                                    <a href="<?=url('@member@',['uid'=>$item['uid']])?>" class="fly-avatar">
                                         <img src="<?=($item['avatar']? ($tuku.$item['avatar']) :$tuku.'/uploads/user/default.png')?>" alt="<?=$item['username']?>">
                                     </a>
                                     <div class="fly-list-title">
                                         <a href="<?=url('@group@',['id'=>$item['id']])?>"><?=$item['title']?></a>
                                     </div>
                                     <div class="fly-list-info">
-                                        <a href="javascript:;"><cite><?=$item['username']?></cite></a>
+                                        <a href="<?=url('@member@',['uid'=>$item['uid']])?>"><cite><?=$item['username']?></cite></a>
                                         <span><?=date('Y-m-d H:i',$item['create_time'])?></span>
                                         <span class="fly-list-nums">
                                     <i class="iconfont icon-pinglun1" title="评论"></i> <?=$item['comments_num']?>

@@ -6,7 +6,7 @@
     {%block@title%}
     <meta http-equiv="X-UA-Compatible" content="IE=edge,Chrome=1">
     <link rel="stylesheet" href="<?=$tuku;?>/static/lib/layui/css/layui.css">
-    <link rel="stylesheet" href="<?=$tuku;?>/static/fly/css/global.css?v=1.2">
+    <link rel="stylesheet" href="<?=$tuku;?>/static/fly/css/global.css?v=1.22">
     <link href="/static/favicon.ico?v=1.1" rel="shortcut icon" type="image/x-icon">
 </head>
 <body>
