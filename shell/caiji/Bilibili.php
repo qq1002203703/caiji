@@ -376,7 +376,7 @@ class Bilibili extends Spider {
             $this->outPut('  评论from_id=>'.$data['from_id'].',已经入库过了'.PHP_EOL);
             return true;
         }
-        $data['length']=mb_strlen($data['content']);
+        $data['length']=mb_strlen(strip_tags($data['content']));
         //垃圾评论过滤
         if($this->is_rubbish($data['content'],($data['children']?? 0),$data['length'])){
             $this->outPut('  评论from_id=>'.$data['from_id'].',是垃圾评论'.PHP_EOL);
@@ -808,28 +808,19 @@ class Bilibili extends Spider {
 
     public function dodo2(){
         $table='caiji_bilibili';
-        $where=[['isdone','eq',0]];
-        $total=$this->model->count([
-            'from'=>$table,
-            'where'=>$where
-        ]);
+        $where=[['isdone','eq',0],['isfabu','eq',1]];
+        $total=999999;
         $this->doLoop($total,function ($perPage)use ($table,$where){
             return $this->model->select('id,from_id')->from($table)->_where($where)->limit($perPage)->findAll(true);
         },function ($item)use ($table){
-            echo '开始处理：id=>'.$item['id'].'---------------'.PHP_EOL;
+            echo '开始处理：id=>'.$item['id'].'-----------'.PHP_EOL;
+            if($this->model->from('caiji_bilibili_comment')->eq('fid',$item['from_id'])->update([
+                'issue'=>1
+            ]))
+                echo '  成功：更新评论issue'.PHP_EOL;
+            else
+                echo '  失败：更新评论issue'.PHP_EOL;
             $update=[ 'isdone'=>1];
-            $table2=$table.'_comment';
-            $where=[['isfabu','eq',0],['fid','eq',$item['from_id']]];
-            $total=$this->model->count([
-                'from'=>$table,
-                'where'=>$where
-            ]);
-            $this->doLoop($total,function ($perPage)use ($table2,$where){
-                return $this->model->select('id,from_id')->from($table2)->_where($where)->order('length desc,id')->limit($perPage)->findAll(true);
-            },function ($item2){
-                echo '  开始处理评论：id=>'.$item2['id'].'---------------'.PHP_EOL;
-
-            });
             if($this->model->from($table)->eq('id',$item['id'])->update($update))
                 echo '  成功：更新'.PHP_EOL;
             else

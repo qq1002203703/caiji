@@ -5,7 +5,7 @@
         <div class="w60 pl2 pr1 fl">
             <div class="item-info">
                 <a class="comment-list-user color-primary f32" href="<?=url('@member@',['uid'=>$comment['uid']])?>" id="user-<?=$comment['id']?>"><?=$comment['username']?></a>
-                <?php if ($comment['is_content']):?><a href="<?=url('@comment@',['id'=>$comment['id']])?>" class="pl1 f32"><i class="icon iconfont icon-dialog"></i></a><?php endif; ?>
+                <?php if ($comment['is_content']):?><a href="<?=url('@comment@',['id'=>$comment['id']])?>" class="pl1 f32"><i class="icon iconfont icon-dialog"></i></a><?php endif;?>
             </div>
             <div class="item-text color3 f30"  id="content-text-<?=$comment['id']?>">
                 <?=$comment['content']?>

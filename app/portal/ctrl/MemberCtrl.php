@@ -28,7 +28,7 @@ class MemberCtrl extends Ctrl
         $data['data']=$model->select('id,title,thumb,type,views,likes,comments_num,create_time')->from('portal_post')->eq('uid',$uid)->eq('status',1)->order('create_time desc,id desc')->limit(30)->findAll(true);
         $data['title']=$data['user']['username'].'的个人主页';
         //最新portal_post的评论
-        $data['comments']=$model->select('c.id,c.content,p.id as oid,table_name,title,c.create_time,p.type,c.pid')->from('comment as c')->join('portal_post as p','c.oid=p.id')->eq('c.uid',$uid)->eq('table_name','portal_post')->order('c.create_time desc,c.id desc')->limit(30)->findAll(true);
+        $data['comments']=$model->select('c.id,c.content,p.id as oid,table_name,title,c.create_time,p.type,c.pid,c.is_content')->from('comment as c')->join('portal_post as p','c.oid=p.id')->eq('c.uid',$uid)->eq('table_name','portal_post')->order('c.create_time desc,c.id desc')->limit(30)->findAll(true);
         $this->_display('member/center',$data,false);
     }
     //所有发表过的文章
@@ -76,7 +76,7 @@ class MemberCtrl extends Ctrl
             $url = url('@member_comment@',['uid'=>$uid]).'?page=(:num)';
             $data['page']=new Paginator($data['total'],$perPage,$currentPage,$url);
             //$data['data']=$model->select('id,title,thumb,type,views,likes,comments_num,create_time')->from('portal_post')->_where($where)->order('create_time desc,id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
-            $data['comments']=$model->select('c.id,c.content,p.id as oid,table_name,title,c.create_time,p.type,c.pid')->from('comment as c')->join('portal_post as p','c.oid=p.id')->eq('c.uid',$uid)->eq('table_name','portal_post')->order('c.create_time desc,c.id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
+            $data['comments']=$model->select('c.id,c.content,p.id as oid,table_name,title,c.create_time,p.type,c.pid,c.is_content')->from('comment as c')->join('portal_post as p','c.oid=p.id')->eq('c.uid',$uid)->eq('table_name','portal_post')->order('c.create_time desc,c.id desc')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
         }else{
             $data['comments']=[];
             $data['page']='';

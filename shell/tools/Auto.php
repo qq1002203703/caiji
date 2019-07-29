@@ -17,6 +17,8 @@ use shell\BaseCommon;
 
 class Auto extends BaseCommon
 {
+    public $fileBodyName='auto';
+    public $path='cache/shell/tools/';
     protected $task=[
         //['name'=>'学校发布','class'=>'\shell\caiji\Xuexiao','method'=>'start','class_param'=>['fabu'],'method_param'=>''],
         ['name'=>'知乎答案发布','class'=>'\shell\ctrl\Portal','method'=>'start','class_param'=>['crontab','-n zhihu'],'method_param'=>''],

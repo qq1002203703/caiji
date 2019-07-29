@@ -10,6 +10,7 @@
         </div>
     <?php endforeach;?>
 </div>
+<?php if ($articles):?>
 <ul class="yang-list pl1 pr1">
     <h2 class="yang-title-border f32 pl1 mb1">最新文章</h2>
     <?php  foreach ($articles as $article):?>
@@ -23,3 +24,17 @@
         </li>
     <?php endforeach;?>
 </ul>
+<?php endif;?>
+<?php if ($comments):?>
+<ul class="home-jieda p2 color3 f30">
+    <h2 class="yang-title-border f32 pl1 mb1">最新评论</h2>
+    <?php foreach ($comments as $item): if(!$item['oid']) continue; ?>
+        <li>
+            <p><a class="color-primary" href="<?=url('@member@',['uid'=>$item['uid']])?>"><?=$item['username']?></a> 在【<a class="color3" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>"><?=$item['title']?></a>】中回答：</p>
+            <div class="p2 bg-color6 radius5 mt2 mb2 mr2">
+                <p><?=\extend\Helper::text_cut($item['content'],200);?><?php if ($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>" class="pl1 f32"><i class="icon iconfont icon-comment"></i></a><?php endif;?></p>
+            </div>
+        </li>
+    <?php endforeach;?>
+</ul>
+<?php endif;?>

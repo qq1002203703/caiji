@@ -174,8 +174,10 @@ class Portal extends BaseCommon
                $this->addTag($id,$item['tag'],'portal_group',0);
                $this->update($item['id'],['isfabu'=>1],$table);
                $this->updateCateNum($data['category_id'],'portal_post');
+               $this->updateCommentIssue($data['category_id']);
            }
        }
+       $this->fabu_comment($config['crontab_comment']??5);
        Conf::clear($this->appName,null,'config/bilibili/');
    }
     protected function getContentFromComment($comments){
@@ -257,6 +259,12 @@ class Portal extends BaseCommon
             $this->outPut(' 失败更新分类下post个数时:'.$num.PHP_EOL);
     }
 
+    protected function updateCommentIssue($fid){
+        if($this->model->from('caiji_bilibili_comment')->eq('fid',$fid)->update([
+            'issue'=>1,
+        ]))
+            $this->outPut(' 成功更新评论issue为1'.PHP_EOL);
+    }
     /** ------------------------------------------------------------------
      * 添加评论
      * @param array $data
@@ -337,43 +345,59 @@ class Portal extends BaseCommon
     protected function addComment3($data,$oid,$create_time,$table,$separator=['{%@@@%}','{%@@%}'],$pid=0){
         if(is_string($data))
             $data=explode($separator[0],$data);
+        $isFalse=false;
         foreach ($data as $item){
             if(!$item){
                 $this->outPut(' 本项评论为空跳过!'.PHP_EOL);
                 continue;
             }
-            $item=explode($separator[1],$item);
-            $count=count($item);
-            if(count($item) !==3){
-                $this->outPut(' 本项评论项目不对：'.$count.PHP_EOL);
-                continue;
-            }
-            $create_time+=mt_rand(700,31*60);
-            $in=[];
-            $in['create_time']=$create_time;
-            $in['username']='';
-            $in['pid']=$pid;
-            $children='';
-            if(strpos($item[2],'{%##%}')){
-                list($in['content'],$children)=explode('{%##%}',$item[2]);
-            }else
-                $in['content']=$item[2];
-            $this->keywordLink2($in['content']);
-            $in['uid']=$this->getUserId($in['username']);
-            $in['table_name']=$table;
-            $in['oid']=$oid;
-            $id=$this->model->from('comment')->insert($in);
-            if(!$id){
-                $this->outPut(' 插入comment表失败!'.PHP_EOL,true);
-                $this->outPut(' 最后的sql:'.$this->model->getSql().PHP_EOL,true);
-                dump($data);
-                exit();
-            }
-            if($children){
-                $this->outPut(' 开始处理子评论!'.PHP_EOL);
-                $this->addComment3($children,$oid,$create_time,$table,['{%|||%}','{%||%}'],$id);
-            }
+            if(!$this->addCommentOne3($item,$oid,$create_time,$table,$separator[1],$pid))
+                $isFalse=true;
         }
+        return ($isFalse !== true);
+    }
+
+    protected function addCommentOne3($item,$oid,&$create_time,$table,$separator='{%@@%}',$pid=0){
+        if(is_string($item))
+            $item=explode($separator,$item);
+        $count=count($item);
+        if(count($item) !==3){
+            $this->outPut(' 本项评论项目不对：'.$count.PHP_EOL);
+            return false;
+        }
+        $create_time+=mt_rand(700,31*60);
+        $in=[];
+        $in['create_time']=$create_time;
+        $in['username']='';
+        $in['pid']=$pid;
+        $children='';
+        if(strpos($item[2],'{%##%}')){
+            list($in['content'],$children)=explode('{%##%}',$item[2]);
+        }else
+            $in['content']=$item[2];
+        $this->keywordLink2($in['content']);
+        $in['uid']=$this->getUserId($in['username']);
+        $in['table_name']=$table;
+        $in['oid']=$oid;
+        //子评论数，和is_content的确定
+        if($children){
+            $in['children']=substr_count($children,'{%|||%}')+1;
+            $length=mb_strlen(strip_tags($in['content']));
+            if(($in['children']>1 &&$length>30) || $length>120)
+                $in['is_content']=1;
+        }
+        $id=$this->model->from('comment')->insert($in);
+        if(!$id){
+            $this->outPut(' 插入comment表失败!'.PHP_EOL,true);
+            $this->outPut(' 最后的sql:'.$this->model->getSql().PHP_EOL,true);
+            dump($in);
+            return false;
+        }
+        if($children){
+            $this->outPut(' 开始处理子评论!'.PHP_EOL);
+            $this->addComment3($children,$oid,$create_time,$table,['{%|||%}','{%||%}'],$id);
+        }
+        return $id;
     }
 
     /** ------------------------------------------------------------------
@@ -401,6 +425,37 @@ class Portal extends BaseCommon
 
     protected function keywordLink2(&$content){
         return app('\app\admin\model\KeywordLink')->doLoop($content);
+    }
+
+    public function fabu_comment($num=2){
+        $this->outPut('从bilibili_comment表发布评论'.PHP_EOL,true);
+        $data=$this->model->select('*')->from('caiji_bilibili_comment')->eq('issue',1)->eq('isfabu',0)->order('create_time,id')->limit($num)->findAll(true);
+        if($data){
+            foreach ($data as $item){
+                $msg=' 处理id=>'.$item['id'];
+                $pdata=$this->model->select('id')->from('portal_post')->eq('from_id',$item['fid'])->find(null,true);
+                if(!$pdata){
+                    $this->outPut($msg.',没有找到父级'.PHP_EOL,true);
+                    continue;
+                }
+                $create_time=time()-700;
+                if($item['more'])
+                    $item['content'].='{%##%}'.$item['more'];
+                $id=$this->addCommentOne3([$item['create_time'],$item['username'],$item['content']],$pdata['id'],$create_time,'portal_post',0);
+                if($id){
+                    $msg.=',成功发布到comment表';
+                    if($this->model->from('caiji_bilibili_comment')->eq('id',$item['id'])->update(['isfabu'=>1]))
+                        $msg.=',成功:更新caiji_bilibili_comment表';
+                    else
+                        $msg.=',失败:更新caiji_bilibili_comment表时';
+                }else{
+                    $msg.=',失败:发布到comment表时';
+                }
+                $this->outPut($msg.PHP_EOL,true);
+            }
+        }else
+            $this->outPut(' 没有符合条件的评论'.PHP_EOL,true);
+        //if()
     }
 
     public function dodo(){

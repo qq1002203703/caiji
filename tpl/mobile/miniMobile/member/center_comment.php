@@ -18,7 +18,7 @@
                     <li>
                         <p><span><?=date('Y-m-d',$item['create_time'])?></span> 在<a class="color-primary" href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>"><?=$item['title']?></a>中回答：</p>
                         <div class="p2 bg-color6 radius5 mt2 mb2 mr2">
-                            <?=$item['content']?>
+                            <p><?=\extend\Helper::text_cut($item['content'],200);?><?php if ($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>" class="pl1 f32"><i class="icon iconfont icon-comment"></i></a><?php endif;?></p>
                         </div>
                     </li>
                 <?php endforeach;else:?>

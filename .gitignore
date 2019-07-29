@@ -13,7 +13,7 @@ vendor/
 douban/
 data/
 cache/
-config/
+config/*
 sql/
 composer.lock
 Authentication

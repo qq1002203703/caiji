@@ -27,7 +27,9 @@
                 </div>
                 <div class="detail-body photos">
                     <div class="home-jieda">
-                        <p class="home-dacontent">原文：<a href="<?=url('@'.$post['type'].'@',['id'=>$post['id']])?>" ><?=$post['title']?></a>：<?=url('@'.$post['type'].'@',['id'=>$post['id']])?></p>
+                        <p class="home-dacontent">
+                            原文：<a href="<?=url('@'.$post['type'].'@',['id'=>$post['id']])?>" ><?=$post['title']?></a><br>
+                            链接：<a href="<?=url('@'.$post['type'].'@',['id'=>$post['id']])?>" ><?=url('@'.$post['type'].'@',['id'=>$post['id']])?></a></p>
                         <?=$data['content'];?>
                         <?php if ($comments):?>
                             <div class="home-dacontent">

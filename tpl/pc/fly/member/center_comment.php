@@ -20,7 +20,7 @@
                         <li>
                             <p><span><?=date('Y-m-d H:i',$item['create_time'])?></span>在<a href="<?=url("@{$item['type']}@",['id'=>$item['oid']])?>#comment-<?=$item['pid']>0?$item['pid']:$item['id']?>" target="_blank"><?=$item['title']?></a>中回答：</p>
                             <div class="home-dacontent">
-                                <?=$item['content']?>
+                                <p><?=\extend\Helper::text_cut($item['content'],200);?><?php if($item['is_content']):?><a href="<?=url('@comment@',['id'=>$item['id']])?>"><i class="iconfont icon-lianjie"></i></a><?php endif;?></p>
                             </div>
                         </li>
                     <?php endforeach;else:?>

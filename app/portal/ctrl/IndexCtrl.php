@@ -29,11 +29,12 @@ class IndexCtrl extends Ctrl
         $this->_display('portal/index',[
             //'title'=>'网站首页',
             'articles'=>$postModel->search([['type','eq','article'],['status','eq',1]],10,'create_time desc,id desc'),
-            'goods'=>$postModel->search([['type','eq','goods'],['status','eq',1]],10,'create_time desc,id desc'),
+            //'goods'=>$postModel->search([['type','eq','goods'],['status','eq',1]],10,'create_time desc,id desc'),
             //'page'=>(string)$page,
             //'bbsData'=>$bbsModel->search([['status','eq',1],['type','eq',2]],'20','create_time desc,id desc',false,'bbs.create_time,bbs.comments_num,bbs.id,bbs.category_id,bbs.title'),
             //'groups'=>$postModel->from('category')->eq('pid',1)->order('counts desc,id desc')->limit(12)->findAll(true),
             'groups'=>$postModel->select('name,slug,counts,thumb')->from('category')->eq('type','portal_group')->order('counts desc,id desc')->limit(12)->findAll(true),
+            'comments'=>$postModel->select('c.id,c.content,p.id as oid,table_name,title,c.create_time,p.type,c.pid,c.is_content,c.username,c.uid')->from('comment as c')->join('portal_post as p','c.oid=p.id')->eq('table_name','portal_post')->order('c.create_time desc,c.id desc')->limit(10)->findAll(true),
             //'topics'=>$postModel->from('tag')->eq('status',1)->order('create_time desc,id desc')->limit(10)->findAll(true),
         ],false);
     }

@@ -122,7 +122,7 @@ class Sitemap extends BaseCommon
                             $url_true=$siteUrl.'/soft/'.$item['id'].'.html';
                             break;
                         default:
-                            $this->outPut('	'.$table.'=>	portal_post表中的switch里不存此type'.PHP_EOL,true);
+                            $this->outPut('	'.$table.'=>portal_post表中的switch里不存此type'.PHP_EOL,true);
                             continue;
                     }
                     $saveName='sitemap-portal';
@@ -136,7 +136,7 @@ class Sitemap extends BaseCommon
                     $saveName='sitemap-weixinqun';
                     break;
                 default:
-                    $this->outPut('	'.$table.'=>	sitemap()方法中的switch里不存此table'.PHP_EOL,true);
+                    $this->outPut('	'.$table.'=>sitemap()方法中的switch里不存此table'.PHP_EOL,true);
                     return false;
             }
             $sitemap.=$url_true."\n";
@@ -147,9 +147,9 @@ class Sitemap extends BaseCommon
         $page=ceil($counter/$this->perPage);
         $sitemapName=$saveName.($page>1 ? ('-'.($page-1)):'').'.txt';
         if(File::write(ROOT.'/public/'.$sitemapName,$sitemap,true))
-            $this->outPut(' 成功写入'.$sitemapName.PHP_EOL,true);
+            $this->outPut('    成功写入'.$sitemapName.PHP_EOL,true);
         else
-            $this->outPut(' 失败写入'.$sitemapName.PHP_EOL,true);
+            $this->outPut('    失败写入'.$sitemapName.PHP_EOL,true);
         $count=count($data);
         $counter+=$count;
         return $data[$count-1]['id'];
@@ -237,6 +237,8 @@ class Sitemap extends BaseCommon
                         $ret[$key]=['code'=>1,'msg'=>$res];
                 }
             }
+        }else{
+            File::write(self::$logFile,'    没有设置搜索引擎提交入口'.PHP_EOL,true);
         }
         return $ret;
     }
