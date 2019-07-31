@@ -454,7 +454,4 @@ class PostCtrl extends Ctrl
         $this->_display('portal/feed_comment',$data,false);
     }
 
-    public function test(){
-        \shell\tools\Sitemap::pingBaidu('http://www.hengyao2015.com/group/24.html',$status,'恒耀平台','http://www.hengyao2015.com');
-    }
 }

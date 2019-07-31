@@ -5,6 +5,8 @@
 <meta name="description" content="<?=$data['excerpt']?>">
 <meta name="mobile-agent" content="format=html5;url=<?=url('@article@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
 <link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@article@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="<?=$site_url?>/feed/portal">
+<link rel="alternate" type="application/rss+xml" title="<?=$title?>" href="<?=url('@feed_article@',['id'=>$data['id'],'feed'=>'feed'])?>">
 {%end%}
 {%block@article%}
 <div class="layui-container">

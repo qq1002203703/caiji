@@ -12,7 +12,6 @@
 
 namespace shell\tools;
 
-use extend\Selector;
 use shell\CaijiCommon;
 
 class Batch extends CaijiCommon
@@ -163,6 +162,48 @@ class Batch extends CaijiCommon
             return 0;
         });
         echo '总共处理了：'.$j.PHP_EOL;
+    }
+
+    /** ------------------------------------------------------------------
+     * 把sitemap-portal.txt的链接全部通过ping提交给百度
+     *---------------------------------------------------------------------*/
+    public function ping(){
+        $fp=fopen(ROOT.'/public/sitemap-portal.txt','rb');
+        while(!feof($fp)){
+            $url = fgets($fp);
+            if($url){
+                $ret=Sitemap::pingBaidu($url,$msg);
+                if($ret)
+                    echo '成功提交：'.$url.PHP_EOL;
+                else
+                    echo '失败：url=>'.$url.',msg=>'.$msg.PHP_EOL;
+                msleep(1500,300);
+            }
+        }
+        fclose($fp);
+    }
+
+    /** ------------------------------------------------------------------
+     * 对bilibili_comment表进行处理，把已经发布过主贴的评论设置issue为1
+     *---------------------------------------------------------------------*/
+    public function update_issue(){
+        $table='caiji_bilibili';
+        $where=[['isdone','eq',0],['isfabu','eq',1]];
+        $this->doLoop(99999,function ($perPage)use ($table,$where){
+            return $this->model->from($table)->_where($where)->limit($perPage)->findAll(true);
+        },function ($item) use ($table){
+            echo '开始处理 id=>'.$item['id'].PHP_EOL;
+           if($this->model->from($table.'_comment')->eq('fid',$item['from_id'])->update(['issue'=>1])===false){
+               exit('   出错了'.PHP_EOL);
+           }
+            $update=['isdone'=>1];
+            if($this->model->from($table)->eq('id',$item['id'])->update($update)){
+                echo '  成功：更新'.PHP_EOL;
+            } else
+                echo '  失败：更新'.PHP_EOL;
+            //msleep(20000);
+            return 0;
+        });
     }
 
 

@@ -6,6 +6,8 @@
 <meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.\extend\Helper::text_cut($data['content'],200):$title)?>">
 <meta name="mobile-agent" content="format=html5;url=<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
 <link rel="alternate" media="only screen and(max-width: 750px)" href="<?=url('@group@',['id'=>$data['id']],'http://'.$mobile_domain)?>">
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="<?=$site_url?>/feed/portal">
+<link rel="alternate" type="application/rss+xml" title="<?=$title?>" href="<?=url('@feed_group@',['id'=>$data['id'],'feed'=>'feed'])?>">
 <style>
     .detail-box h1.video-title{font-size: 16px;color: #666;text-align: center;margin-bottom:10px; }
     .video-container{max-width: 620px;margin: 0 auto;border: 1px solid #000}

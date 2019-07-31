@@ -133,48 +133,55 @@ class Portal extends BaseCommon
        $config=Conf::all($this->appName,false,'config/bilibili/');
        //$num=mt_rand(1,2);
        $num=mt_rand($config['crontab_num_min'],$config['crontab_num_max']);
-       $data=$this->model->from($table)->_where($where)->order('id')->limit($num)->findAll(true);
-       foreach ($data as $item){
-           $this->outPut('开始处理：id=>'.$item['id'].',-------------'.PHP_EOL);
-           $where=['from_id'=>$item['from_id'],['pfid',($item['pfid']>0 ? 'gt' : 'eq'),0]];
-            if($this->model->from('portal_post')->_where($where)->find(null,true)){
-                $this->outPut(' 此from_id已入库'.PHP_EOL);
-                $this->update($item['id'],['isfabu'=>1],$table);
-                continue;
-            }
-           $data=[
-               'title'=>$item['title'],
-               'seo_title'=>$item['seo_title'],
-               'type'=>'group',
-               'from_id'=>$item['from_id'],
-               //'content'=>$item['content'],
-               'videos'=>$item['videos'],
-           ];
-            //确定pid
-           if($item['pfid']>0){
-               $parent=$this->model->from('portal_post')->eq('from_id',$item['pfid'])->eq('pid',0)->find(null,true);
-               if(!$parent){
-                   $this->outPut('  id=>'.$item['id'].'没有找到对应的父级'.PHP_EOL,true);
+       if($num<1){
+           $this->outPut('  本次定时发布个数为0，不进行发布'.PHP_EOL,true);
+           $dataArr=[];
+       }else{
+           $dataArr=$this->model->from($table)->_where($where)->order('id')->limit($num)->findAll(true);
+       }
+       if($dataArr){
+           foreach ($dataArr as $item){
+               $this->outPut('开始处理：id=>'.$item['id'].',-------------'.PHP_EOL);
+               $where=['from_id'=>$item['from_id'],['pfid',($item['pfid']>0 ? 'gt' : 'eq'),0]];
+               if($this->model->from('portal_post')->_where($where)->find(null,true)){
+                   $this->outPut(' 此from_id已入库'.PHP_EOL);
+                   $this->update($item['id'],['isfabu'=>1],$table);
                    continue;
                }
-                $data['pid']=$parent['id'];
-           }
-           $data['category_id']=mt_rand($config['crontab_category_id_min'],$config['crontab_category_id_max']);
-           $item['username']='';
-           $data['uid']=$this->getUserId($item['username']);
-           $this->keywordLink2($data['content']);
-           $item['comment']=$item['comment']?explode('{%@@@%}',$item['comment']):[];
-           $data['content']=$this->getContentFromComment($item['comment']);
-           $data['comments_num']=count($item['comment']);
-           $data['create_time']=time()-mt_rand(3600*2,3600*4);
-           $data['update_time']=$data['create_time'];
-           if($id=$this->model->from('portal_post')->insert($data)){
-               $this->outPut(' 成功添加到portal_post表'.PHP_EOL);
-               $this->addComment3($item['comment'],$id,$data['create_time'],'portal_post');
-               $this->addTag($id,$item['tag'],'portal_group',0);
-               $this->update($item['id'],['isfabu'=>1],$table);
-               $this->updateCateNum($data['category_id'],'portal_post');
-               $this->updateCommentIssue($data['category_id']);
+               $data=[
+                   'title'=>$item['title'],
+                   'seo_title'=>$item['seo_title'],
+                   'type'=>'group',
+                   'from_id'=>$item['from_id'],
+                   //'content'=>$item['content'],
+                   'videos'=>$item['videos'],
+               ];
+               //确定pid
+               if($item['pfid']>0){
+                   $parent=$this->model->from('portal_post')->eq('from_id',$item['pfid'])->eq('pid',0)->find(null,true);
+                   if(!$parent){
+                       $this->outPut('  id=>'.$item['id'].'没有找到对应的父级'.PHP_EOL,true);
+                       continue;
+                   }
+                   $data['pid']=$parent['id'];
+               }
+               $data['category_id']=mt_rand($config['crontab_category_id_min'],$config['crontab_category_id_max']);
+               $item['username']='';
+               $data['uid']=$this->getUserId($item['username']);
+               $this->keywordLink2($data['content']);
+               $item['comment']=$item['comment']?explode('{%@@@%}',$item['comment']):[];
+               $data['content']=$this->getContentFromComment($item['comment']);
+               $data['comments_num']=count($item['comment']);
+               $data['create_time']=time()-mt_rand(3600*2,3600*4);
+               $data['update_time']=$data['create_time'];
+               if($id=$this->model->from('portal_post')->insert($data)){
+                   $this->outPut(' 成功添加到portal_post表'.PHP_EOL);
+                   $this->addComment3($item['comment'],$id,$data['create_time'],'portal_post');
+                   $this->addTag($id,$item['tag'],'portal_group',0);
+                   $this->update($item['id'],['isfabu'=>1],$table);
+                   $this->updateCateNum($data['category_id'],'portal_post');
+                   $this->updateCommentIssue($data['from_id']);
+               }
            }
        }
        $this->fabu_comment($config['crontab_comment']??5);
@@ -429,6 +436,8 @@ class Portal extends BaseCommon
 
     public function fabu_comment($num=2){
         $this->outPut('从bilibili_comment表发布评论'.PHP_EOL,true);
+        if($num<1)
+            return;
         $data=$this->model->select('*')->from('caiji_bilibili_comment')->eq('issue',1)->eq('isfabu',0)->order('create_time,id')->limit($num)->findAll(true);
         if($data){
             foreach ($data as $item){

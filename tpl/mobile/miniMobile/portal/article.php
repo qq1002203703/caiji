@@ -4,6 +4,8 @@
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
 <meta name="description" content="<?=$data['excerpt']?>">
 <link rel="canonical" href="<?=url('@article@',['id'=>$data['id']],$site_url)?>">
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="htt://<?=$mobile_domain?>/feed/portal">
+<link rel="alternate" type="application/rss+xml" title="<?=$title?>" href="<?=url('@feed_article@',['id'=>$data['id'],'feed'=>'feed'])?>">
 {%end%}
 
 {%block@article%}

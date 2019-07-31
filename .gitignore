@@ -24,6 +24,8 @@ Username
 public/uploads/
 public/do.php
 public/test.php
+public/robots.txt
+public/sitemap*
 #tpl
 #tpl/pc/fly/tmp/
 #tpl/mobile/miniMobile/tmp/

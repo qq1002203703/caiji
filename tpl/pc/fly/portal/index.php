@@ -5,6 +5,7 @@
 <meta name="description" content="<?=$site_description?>">
 <meta name="mobile-agent" content="format=html5;url=http://<?=$mobile_domain?>/">
 <link rel="alternate" media="only screen and(max-width: 750px)" href="http://<?=$mobile_domain?>/">
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="<?=$site_url?>/feed/portal">
 {%end%}
 {%block@article%}
 <div class="layui-container">

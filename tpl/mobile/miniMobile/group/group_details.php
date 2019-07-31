@@ -5,6 +5,8 @@
 <meta name="keywords" content="<?=($data['keywords']?:$title);?>">
 <meta name="description" content="<?=$data['excerpt']?:($data['videos']?$site_name.'为你提供'.$title.'视频在线观看,'.\extend\Helper::text_cut($data['content'],200):$title)?>">
 <link rel="canonical" href="<?=url('@group@',['id'=>$data['id']],$site_url)?>">
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="htt://<?=$mobile_domain?>/feed/portal">
+<link rel="alternate" type="application/rss+xml" title="<?=$title?>" href="<?=url('@feed_group@',['id'=>$data['id'],'feed'=>'feed'])?>">
 {%end%}
 {%block@article%}
 <div class="yang-bread f30 pl1 mt1"><a href="/">首页</a>&gt<a href="/group/all">小组</a>&gt<?=$bread;?>详情</div>

@@ -145,7 +145,7 @@ class Sitemap extends BaseCommon
                     return false;
             }
             $sitemap.=$url_true."\n";
-            if($this->isAutoSubmit){
+            if($this->isAutoSubmit || $this->isAutoPing){
                 $this->urls[]=$url_true;
             }
         }
@@ -249,7 +249,7 @@ class Sitemap extends BaseCommon
     }
 
     /** ------------------------------------------------------------------
-     * 自动提交给百度ping服务入口，参考资料 http://help.baidu.com/question?prod_id=99&class=0&id=3046
+     * ping百度的博客提交入口，参考资料 http://help.baidu.com/question?prod_id=99&class=0&id=3046
      * @param string $url
      * @param string $msg 结果信息提示
      * @param string $siteName 网站名称
@@ -327,16 +327,18 @@ EOT;
      * @return int 返回成功提交的条数
      *---------------------------------------------------------------------*/
     static public function ping(array $urls,&$msg){
-        if(!$urls)
+        if(!$urls){
+            $msg = '     ping提交出错：urls不能为空'.PHP_EOL;
             return 0;
+        }
         $count=0;
         $msg='';
         foreach ($urls as $url){
-            $ret=self::pingBaidu($url,$msg);
+            $ret=self::pingBaidu($url,$msg_ret);
             if($ret)
                 $count++;
-            else
-                $msg.='     ping提交出错：url=>'.$url.',msg=>'.$msg.PHP_EOL;
+             else
+                $msg.='     ping提交出错：url=>'.$url.',msg=>'.$msg_ret.PHP_EOL;
         }
         return $count;
     }
