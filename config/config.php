@@ -11,7 +11,7 @@
     'cache_path_mobile' => 'cache/tpl/mobile',
   ),
   'pwd' => 'Djidksl$$EER4ds58^)UUsshcmO',
-  'code_key'=>'O#98287in',
+  'code_key'=>'Nx&87inUE',
   'kami' => 
   array (
     0 => 

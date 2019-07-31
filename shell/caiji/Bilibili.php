@@ -159,6 +159,7 @@ class Bilibili extends Spider {
             if($code<0){
                 exit('运行 '.$this->currentAction.' 时发生错误，信息：'.$this->error[$code].PHP_EOL);
             }elseif($code==1 || $result['comment_counts']<$this->options['comment_min']){
+                echo '  评论数达不到要求，此条不要'.PHP_EOL;
                 $update['isfabu']=1;
             }else{
                 if($result['comment_counts']>0){
@@ -308,7 +309,6 @@ class Bilibili extends Spider {
                 if($max_page > $this->options['comment_max']){
                     $max_page= $this->options['comment_max'];
                 }
-
             }
             if($res['data']['replies']){
                 foreach ($res['data']['replies'] as $reply){

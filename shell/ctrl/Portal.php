@@ -620,4 +620,27 @@ class Portal extends BaseCommon
         return $content;
     }
 
+    public function test(){
+        $table='portal_post';
+        $where=[['uid','eq',0]];
+        $total=999999;
+        $this->doLoop($total,function ($perPage)use ($table,$where){
+            return $this->model->select('id')->from($table)->_where($where)->limit($perPage)->findAll(true);
+        },function ($item)use ($table){
+            echo '开始处理：id=>'.$item['id'].'-----------'.PHP_EOL;
+            $username='';
+            $uid=$this->getUserId($username);
+            $update=[ 'uid'=>$uid];
+            if($this->model->from($table)->eq('id',$item['id'])->update($update))
+                echo '  成功：更新'.PHP_EOL;
+            else
+                echo '  失败：更新'.PHP_EOL;
+            //msleep(2000);
+        });
+    }
+
+    public function test2(){
+        echo mb_strlen('嗨Howard，我第一次遇到问题时确实阅读了这篇文章。问题是标签现在只有在您搜索它们时才可用-这意味着您需要知道您要查找什么。我有几十个标签可以对数百个文档进行排序。在此之前，当我想按标签排序或添加标签时，我会从');
+    }
+
 }

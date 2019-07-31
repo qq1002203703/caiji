@@ -168,7 +168,7 @@ class HttpClient
         $i=0;
         do{
             $i++;
-            $this->outPut('第'.$i.'次进行请求--------'.PHP_EOL);
+            $this->outPut(' 第'.$i.'次进行请求--------'.PHP_EOL);
             $html = $this->request($url, $method, $data);
             if($html===false){
                 $this->outPut(' 采集结果为false ：'.$url.PHP_EOL);

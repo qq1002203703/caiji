@@ -121,7 +121,7 @@ class Helper
      * @return string
      *--------------------------------------------------------------------*/
     static public function text_cut($str,$length,$chatset='UTF-8'){
-        return mb_substr(strip_tags($str),0,$length,$chatset);
+        return mb_substr(str_replace(["\n","\r","\t"],'',strip_tags($str)),0,$length,$chatset);
     }
 
     /** ------------------------------------------------------------------
@@ -443,7 +443,8 @@ class Helper
             $key=Conf::get('coke_key','config');
         foreach (str_split($key) as $k=> $value)
             $k < $strCount && $strArr[$k] .= $value;
-        return str_replace(array('=', '+', '/'), array('O0O0O', 'o000o', 'oo00o'), join('', $strArr));
+        //return join('', $strArr);
+        return str_replace(array('=', '+', '/'), array('O0O0O', 'o000o', 'oo00oo'), join('', $strArr));
     }
     /** ------------------------------------------------------------------
      * 对PHP简单加密后的字符串进行解密
@@ -452,7 +453,8 @@ class Helper
      * @return string
      *---------------------------------------------------------------------*/
     public static function decode($string, $key=''){
-        $strArr   = str_split(str_replace(array('O0O0O', 'o000o', 'oo00o'), array('=', '+', '/'), $string), 2);
+        $strArr   = str_split(str_replace(array('O0O0O', 'o000o', 'oo00oo'), array('=', '+', '/'), $string), 2);
+        //$strArr   = str_split($string, 2);
         $strCount = count($strArr);
         if(checkIsEmpty($key))
             $key=Conf::get('code_key','config');
@@ -461,12 +463,12 @@ class Helper
         return base64_decode(join('', $strArr));
     }
     //网址加密
-    public static function urldecode($url){
-        return self::decode(urldecode($url));
+    public static function urlencode($url){
+        return self::encode(urlencode($url));
     }
     //网址解密
-    public static function urlencode($url){
-        return urlencode(self::encode($url));
+    public static function urldecode($url){
+        return urldecode(self::decode($url));
     }
 
     /**--------------------------------------------------------------------

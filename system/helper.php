@@ -276,7 +276,7 @@ if(!function_exists('msleep')){
         else
             $time=$n;
         if($isEcho)
-            echo '休眠：'.($time/1000).'秒..............'.PHP_EOL;
+            echo '  休眠：'.($time/1000).'秒..............'.PHP_EOL;
         usleep($time*1000);
 		return 0;
     }

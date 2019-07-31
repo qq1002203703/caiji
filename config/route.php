@@ -16,6 +16,10 @@ router()
 
     ->get('comment','comment/:id:d.html','portal/post/comment','.html')//评论
 
+    ->get('feed','feed/portal','portal/post/feed','')//feed
+    ->get('feed_article','article/:id:d/:feed:d-.html','portal/post/feed_comment','.html')
+    ->get('feed_group','group/:id:d/:vid:d-:feed:a.html','portal/post/feed_comment','')
+
     ->get('tag','topic/:slug','portal/post/tag')//标签
     ->get('tag_all','topic-all/','portal/post/tag_all')
     //->get('bbs_post','bbs/post/:id:d.html','bbs/post/show','.html')

@@ -21,14 +21,15 @@ class Sitemap extends BaseCommon
     public $path='cache/shell/tools/';
     public $fileBodyName='sitemap';
     public $perPage=20000;  //每个sitemap文件储存的链接条数
-    public $isAutoSubmit=false;//是否自动提交
+    public $isAutoSubmit=false;//是否自动sitemap提交
+    public $isAutoPing=false; //是否进行自动ping提交
     protected $urls=[];
 
 
     public function __construct($param=[])
     {
         parent::__construct($param);
-        $this->_setCommandOptions(['-a'=>['isAutoSubmit',true]],$this->param);
+        $this->_setCommandOptions(['-a'=>['isAutoSubmit',true],'-p'=>['isAutoPing',true]],$this->param);
         self::$logFile=ROOT.'/'.$this->path.$this->fileBodyName.'.log';
     }
 
@@ -76,6 +77,10 @@ class Sitemap extends BaseCommon
             ]);
             if($this->isAutoSubmit){
                 self::submitMulti($this->urls,false);
+            }
+            if($this->isAutoPing){
+                $count=self::ping($this->urls,$msg);
+                $this->outPut(' 进行了ping提交,成功'.$count.'条!'.PHP_EOL.$msg,true);
             }
         });
     }
@@ -243,5 +248,97 @@ class Sitemap extends BaseCommon
         return $ret;
     }
 
+    /** ------------------------------------------------------------------
+     * 自动提交给百度ping服务入口，参考资料 http://help.baidu.com/question?prod_id=99&class=0&id=3046
+     * @param string $url
+     * @param string $msg 结果信息提示
+     * @param string $siteName 网站名称
+     * @param string $siteUrl 网站连接
+     * @return bool 成功返回true,失败返回false
+     *---------------------------------------------------------------------*/
+    static public function pingBaidu($url,&$msg='',$siteName='',$siteUrl=''){
+        $baiduUrl='http://ping.baidu.com/ping/RPC2';
+        if(!$siteName)
+            $siteName=Conf::get('site_name','site');
+        if(!$siteUrl)
+            $siteUrl=Conf::get('site_url','site');
+        $xml = <<<EOT
+<?xml version="1.0" encode="UTF-8"?>
+<methodCall>
+    <methodName>weblogUpdates.extendedPing</methodName>
+    <params>
+        <param><value><string>{$siteName}</string></value></param>
+        <param><value><string>{$siteUrl}/</string></value></param>
+        <param><value><string>{$url}</string></value></param>
+        <param><value><string>{$siteUrl}/feed/portal</string></value></param>
+    </params>
+</methodCall>
+EOT;
+        //dump($xml);exit();
+        $options =  array(
+            CURLOPT_URL => $baiduUrl,
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER=> 1,
+            CURLOPT_FOLLOWLOCATION =>1,
+            CURLOPT_HEADER=>array(
+                'Content-Length: '.strlen($xml),
+                'Content-Type: text/xml',
+                'Host: ping.baidu.com',
+                'Referer: http://ping.baidu.com/ping.html',
+                //'User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+                'User-Agent: request',
+            ),
+            CURLOPT_TIMEOUT=>15,
+            CURLOPT_CONNECTTIMEOUT=>7,
+            CURLOPT_POSTFIELDS => $xml,
+            CURLOPT_HEADER=>false,
+        );
+        if(substr($baiduUrl,0,5)=='https'){
+            $options[CURLOPT_SSL_VERIFYPEER]=false;
+            $options[CURLOPT_SSL_VERIFYHOST]=0;
+        }
+        $ch = curl_init();
+        curl_setopt_array($ch, $options);
+        $i=0;
+        do{//失败重试三次
+            $result = curl_exec($ch);
+            $i++;
+        }while ($result === false && $i <= 3 && msleep(1000,3000,false)==0);
+        //dump($result);
+        if ($result===false) {
+            $msg='连接超时：'.curl_error($ch);
+            curl_close($ch);
+        }else{
+            curl_close($ch);
+            if(strpos($result,'<int>0</int>')!==false){
+                $result=true;
+                $msg='success';
+            }else{
+                $result=false;
+                $msg='提交失败，返回信息如下：'.$result;
+            }
+        }
+        return $result;
+    }
+
+    /** ------------------------------------------------------------------
+     * 多条链接的ping提交
+     * @param array $urls
+     * @return int 返回成功提交的条数
+     *---------------------------------------------------------------------*/
+    static public function ping(array $urls,&$msg){
+        if(!$urls)
+            return 0;
+        $count=0;
+        $msg='';
+        foreach ($urls as $url){
+            $ret=self::pingBaidu($url,$msg);
+            if($ret)
+                $count++;
+            else
+                $msg.='     ping提交出错：url=>'.$url.',msg=>'.$msg.PHP_EOL;
+        }
+        return $count;
+    }
 
 }

@@ -424,4 +424,37 @@ class PostCtrl extends Ctrl
         //dump($data);exit();
         $this->_display('portal/comment',$data,false);
     }
+
+    public function feed(){
+        $postModel=app('\app\portal\model\PortalPost');
+        $data[]=['title'=>'site feed/rss'];
+        $data['data']=$postModel->search([['status','eq',1]],20,'create_time desc,id desc');
+        if($data['data']){
+            $data['lastBuildDate']=$data['data'][0]['create_time'];
+        }else{
+            $data['lastBuildDate']=time();
+        }
+        $this->_display('portal/feed',$data,false);
+    }
+
+    public function feed_comment($id,$feed){
+        if(!$id || $feed!=='feed' || $id<1)
+            show_error('输入不正确的id或feed');
+        $model=app('\app\portal\model\PortalPost');
+        $data=['title'=>'comment feed'];
+        $data['data']=$model->getOne($id);
+        if(!$data)
+            show_error('不存在的id');
+        //直接查询评论
+        if($data['data']['comments_num'] >0){
+            $data['comments']=$model->select('id,username,uid,content,create_time')->from('comment')->eq('table_name','portal_post')->eq('oid',$id)->order('create_time desc,id desc')->limit(20)->findAll(true);
+        }else
+            $data['comments']=[];
+        //dump($data);exit();
+        $this->_display('portal/feed_comment',$data,false);
+    }
+
+    public function test(){
+        \shell\tools\Sitemap::pingBaidu('http://www.hengyao2015.com/group/24.html',$status,'恒耀平台','http://www.hengyao2015.com');
+    }
 }

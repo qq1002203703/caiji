@@ -1,0 +1,20 @@
+<?php
+return [
+    'app_name'=>'xingyao2010.com',
+    'app_keywords'=>['杏耀平台','杏耀主管','杏耀注册'],
+    'search_type'=>'video',
+    'search_keyword'=>'特产',
+    'title_keywords'=>['视频','高清','xx0oo','杏耀平台','杏耀主管','杏耀','杏耀注册'],
+    //评论
+    'comment_max'=>10,//最大页数
+    'comment_min'=>15,//最小的评论数
+    //发布
+    'title_text'=>['快来看看','欣赏一下','流口水了','会忍不住想吃'],
+    'fields_filter'=>['content'=>'','comment'=>''],
+    //定时
+    'crontab_category_id_max'=>12,
+    'crontab_category_id_min'=>1,
+    'crontab_num_max'=>1,
+    'crontab_num_min'=>1,
+    'crontab_comment'=>10,
+];
