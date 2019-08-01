@@ -453,6 +453,12 @@ class Portal extends BaseCommon
                 $id=$this->addCommentOne3([$item['create_time'],$item['username'],$item['content']],$pdata['id'],$create_time,'portal_post',0);
                 if($id){
                     $msg.=',成功发布到comment表';
+                    //更新评论数
+                    $count=$this->model->count([
+                        'from'=>'comment',
+                        'where'=>[['oid','eq',$pdata['id']],['table_name','eq','portal_post']],
+                    ]);
+                    $this->model->from('portal_post')->eq('id',$pdata['id'])->update(['comments_num'=>$count]);
                     if($this->model->from('caiji_bilibili_comment')->eq('id',$item['id'])->update(['isfabu'=>1]))
                         $msg.=',成功:更新caiji_bilibili_comment表';
                     else

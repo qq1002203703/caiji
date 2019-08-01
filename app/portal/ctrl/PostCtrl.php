@@ -178,7 +178,7 @@ class PostCtrl extends Ctrl
         $data['total'] = $cateModel->count(['where'=>$where]);
         if($data['total'] >0){
             $data['data']=$cateModel->_where($where)->order('id')->limit(($currentPage-1)*$perPage,$perPage)->findAll(true);
-            $url = url('@'.$type.'_list@').'?page=(:num)';
+            $url = url('@'.$type.'_all@').'?page=(:num)';
             $data['page']=(string)new Paginator($data['total'],$perPage,$currentPage,$url);
         }else{
             $data['page']='';

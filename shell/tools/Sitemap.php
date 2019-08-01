@@ -221,10 +221,11 @@ class Sitemap extends BaseCommon
      * ]
      *--------------------------------------------------------------------*/
     static public function submitMulti($urls,$isReturn=false,$apis=[]){
-        echo ' 开始进行submitMulti'.PHP_EOL;
+        //echo ' 开始进行submitMulti'.PHP_EOL;
         //$apis=['baidu'=>'xxx.com','soso'=>'xx.ssoso.com'];
+        $apis || $apis=Conf::get('sitemap_api','site');
         if(!$apis)
-            $apis=Conf::get('sitemap_api','site');
+            return [];
         $ret=[];
         $count=is_array($urls) ? count($urls) : (preg_match_all('/\n/',$urls)+1);
         if($apis){
@@ -257,7 +258,6 @@ class Sitemap extends BaseCommon
      * @return bool 成功返回true,失败返回false
      *---------------------------------------------------------------------*/
     static public function pingBaidu($url,&$msg='',$siteName='',$siteUrl=''){
-        $baiduUrl='http://ping.baidu.com/ping/RPC2';
         if(!$siteName)
             $siteName=Conf::get('site_name','site');
         if(!$siteUrl)
@@ -274,26 +274,42 @@ class Sitemap extends BaseCommon
     </params>
 </methodCall>
 EOT;
-        //dump($xml);exit();
+        return self::pingHttp('http://ping.baidu.com/ping/RPC2',$xml,[
+            'Content-Length: '.strlen($xml),
+            'Content-Type: text/xml',
+            'Host: ping.baidu.com',
+            'Referer: http://ping.baidu.com/ping.html',
+            //'User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent: request',
+        ],$msg,'baidu');
+    }
+
+    /** ------------------------------------------------------------------
+     * pingHttp
+     * @param string $pingUrl 要ping的服务器地址
+     * @param string $xml 提交的xml内容
+     * @param array $header curl提交时的header信息
+     * @param string $msg 结果提示信息
+     * @param string $type 'baidu' or 'google'
+     * @return bool 成功返回 true 失败返回 false
+     *---------------------------------------------------------------------*/
+    static protected function pingHttp($pingUrl,$xml,$header,&$msg,$type){
+        if(!in_array($type,['google','baidu'],true)){
+            $msg='type种类不正确';
+            return false;
+        }
         $options =  array(
-            CURLOPT_URL => $baiduUrl,
+            CURLOPT_URL => $pingUrl,
             CURLOPT_POST => true,
             CURLOPT_RETURNTRANSFER=> 1,
             CURLOPT_FOLLOWLOCATION =>1,
-            CURLOPT_HEADER=>array(
-                'Content-Length: '.strlen($xml),
-                'Content-Type: text/xml',
-                'Host: ping.baidu.com',
-                'Referer: http://ping.baidu.com/ping.html',
-                //'User-Agent:Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
-                'User-Agent: request',
-            ),
+            CURLOPT_HEADER=>$header,
             CURLOPT_TIMEOUT=>15,
             CURLOPT_CONNECTTIMEOUT=>7,
             CURLOPT_POSTFIELDS => $xml,
             CURLOPT_HEADER=>false,
         );
-        if(substr($baiduUrl,0,5)=='https'){
+        if(substr($pingUrl,0,5)=='https'){
             $options[CURLOPT_SSL_VERIFYPEER]=false;
             $options[CURLOPT_SSL_VERIFYHOST]=0;
         }
@@ -310,7 +326,8 @@ EOT;
             curl_close($ch);
         }else{
             curl_close($ch);
-            if(strpos($result,'<int>0</int>')!==false){
+            $need=['google'=>'<boolean>0</boolean>','baidu'=>'<int>0</int>'];
+            if(strpos($result,$need[$type])!==false){
                 $result=true;
                 $msg='success';
             }else{
@@ -319,6 +336,39 @@ EOT;
             }
         }
         return $result;
+    }
+
+    /** ------------------------------------------------------------------
+     * pingGoogle
+     * @param string $url
+     * @param string $msg 结果信息提示
+     * @param string $siteName 网站名称
+     * @param string $siteUrl 网站连接
+     * @return bool 成功返回true,失败返回false
+     *---------------------------------------------------------------------*/
+    static public function pingGoogle($url,&$msg='',$siteName='',$siteUrl=''){
+        if(!$siteName)
+            $siteName=Conf::get('site_name','site');
+        if(!$siteUrl)
+            $siteUrl=Conf::get('site_url','site');
+        $xml = <<<EOT
+<?xml version="1.0" encode="UTF-8"?>
+<methodCall>
+  <methodName>weblogUpdates.extendedPing</methodName>
+  <params>
+    <param><value>{$siteName}</value></param>
+    <param><value>{$siteUrl}</value></param>
+    <param><value>{$url}</value></param>
+    <param><value>{$siteUrl}/feed/portal</value></param>
+  </params>
+</methodCall>
+EOT;
+        return self::pingHttp('http://blogsearch.google.com/ping/RPC2',$xml,[
+            'Content-Length: '.strlen($xml),
+            'Content-Type: text/xml',
+            'Host: blogsearch.google.com',
+            'User-Agent: request',
+        ],$msg,'google');
     }
 
     /** ------------------------------------------------------------------
@@ -338,7 +388,12 @@ EOT;
             if($ret)
                 $count++;
              else
-                $msg.='     ping提交出错：url=>'.$url.',msg=>'.$msg_ret.PHP_EOL;
+                $msg.='     baiduPing提交出错：url=>'.$url.',msg=>'.$msg_ret.PHP_EOL;
+           /* $ret=self::pingGoogle($url,$msg_ret);
+            if($ret)
+                $count++;
+            else
+                $msg.='     GooglePing提交出错：url=>'.$url.',msg=>'.$msg_ret.PHP_EOL;*/
         }
         return $count;
     }

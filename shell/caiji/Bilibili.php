@@ -20,7 +20,7 @@ class Bilibili extends Spider {
     public $fieldsFilter=['iscaiji','isend','isfabu','isdownload','isdone','times','caiji_name'];
     public $options;
     protected $fileBodyName='bilibili';
-    protected $error=[
+    public $error=[
         1=>'视频已失效',
         -1=>'采集结果false',
         -2=>'采集结果http_code不是200',
@@ -232,11 +232,17 @@ class Bilibili extends Spider {
             echo '  失败：更新'.PHP_EOL;
     }
 
-    //视频cid采集
-    protected function spiderVideo($fid,&$result,$getDetails=false){
+    /** ------------------------------------------------------------------
+     * spiderVideo 视频cid采集
+     * @param $fid
+     * @param $result
+     * @param bool $getDetails
+     * @return int
+     *---------------------------------------------------------------------*/
+    public function spiderVideo($aid,&$result,$getDetails=false){
         $this->currentAction='spiderVideo';
-        $url='https://api.bilibili.com/x/web-interface/view?aid='.$fid;
-        $this->outPut(' 开始采集 aid=>'.$fid.' 的cid'.PHP_EOL);
+        $url='https://api.bilibili.com/x/web-interface/view?aid='.$aid;
+        $this->outPut(' 开始采集 aid=>'.$aid.' 的cid'.PHP_EOL);
         $result=[];
         $res=$this->client->http($url);
         if($res===false){
@@ -254,7 +260,7 @@ class Bilibili extends Spider {
             return -4;
         }
         if($res['code']!=0){
-            echo '  code不为0，提示：'.$res['message'].PHP_EOL;
+            $this->outPut('  code不为0，提示：'.$res['message'].PHP_EOL);
             return 1;
         }else{
             $result['cid']=$res['data']['cid'];
@@ -277,8 +283,9 @@ class Bilibili extends Spider {
         unset($res);
         return 0;
     }
+
     //采集评论
-    protected function spiderComment($fid){
+    public function spiderComment($fid,$func=null){
         $this->currentAction='spiderComment';
         $url='https://api.bilibili.com/x/v2/reply?type=1&oid='.$fid.'&sort=2&pn=';
         $max_page=999999;
@@ -329,7 +336,10 @@ class Bilibili extends Spider {
                         $commentData['more']=implode('{%|||%}',$arr);
                     }
                     //评论入库
-                    $this->saveComment($commentData);
+                    if($func)
+                        $this->callback($func,[$commentData]);
+                    else
+                        $this->saveComment($commentData);
                 }
             }
         }

@@ -59,6 +59,9 @@ class ApiPortalCtrl extends ApiAdminCtrl
                 else{
                     //提交到搜索引擎
                     Sitemap::submitMulti(url('@'.$this->type.'@',['id'=>$id]),false);
+                    //ping提交
+                    if(Conf::get('ping_baidu','site'))
+                        Sitemap::pingBaidu(url('@'.$this->type.'@',['id'=>$id]));
                     return json(['code'=>0,'msg'=>'成功添加,新id为:'.$id.'，你可以继续添加下一个了','action'=>url('admin/portal/post_add').'?type='.$this->type]);
                 }
 
